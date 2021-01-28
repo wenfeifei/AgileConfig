@@ -20,7 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Agile.Config.Protocol\Agile.Config.Protocol.csproj" />
     <ProjectReference Include="..\AgileConfig.Server.Data.Entity\AgileConfig.Server.Data.Entity.csproj" />
-    <ProjectReference Include="..\AgileConfig.Server.Data.Repository\AgileConfig.Server.Data.Repository.csproj" />
+    <ProjectReference Include="..\AgileConfig.Server.Data.Freesql\AgileConfig.Server.Data.Freesql.csproj" />
     <ProjectReference Include="..\AgileConfig.Server.Service\AgileConfig.Server.Service.csproj" />
   </ItemGroup>
 
@@ -40,9 +40,15 @@
     <None Include="wwwroot\lib\bootstrap\dist\js\bootstrap.min.js" />
     <None Include="wwwroot\lib\bootstrap\dist\js\npm.js" />
     <None Include="wwwroot\lib\bootstrap\LICENSE" />
+    <None Include="wwwroot\lib\code_mirror\lib\codemirror.js" />
+    <None Include="wwwroot\lib\code_mirror\mode\javascript\javascript.js" />
+    <None Include="wwwroot\lib\code_mirror\mode\javascript\test.js" />
+    <None Include="wwwroot\lib\code_mirror\mode\meta.js" />
+    <None Include="wwwroot\lib\code_mirror\mode\yaml\yaml.js" />
     <None Include="wwwroot\lib\jquery\dist\jquery.js" />
     <None Include="wwwroot\lib\jquery\dist\jquery.min.js" />
     <None Include="wwwroot\lib\jquery\dist\jquery.min.map" />
+    <None Include="wwwroot\lib\layer\mobile\layer.js" />
   </ItemGroup>
 
   <ItemGroup>

@@ -50,7 +50,7 @@ namespace AgileConfig.Server.Apisite.Controllers
             var result = await _serverNodeService.AddAsync(node);
             if (result)
             {
-                await _sysLogService.AddSysLogSync(new SysLog
+                await _sysLogService.AddSysLogAsync(new SysLog
                 {
                     LogTime = DateTime.Now,
                     LogType = SysLogType.Normal,
@@ -60,6 +60,7 @@ namespace AgileConfig.Server.Apisite.Controllers
            
             return Json(new
             {
+                data = node,
                 success = result,
                 message = !result ? "添加节点失败，请查看错误日志" : ""
             });
@@ -87,7 +88,7 @@ namespace AgileConfig.Server.Apisite.Controllers
             var result = await _serverNodeService.DeleteAsync(node);
             if (result)
             {
-                await _sysLogService.AddSysLogSync(new SysLog
+                await _sysLogService.AddSysLogAsync(new SysLog
                 {
                     LogTime = DateTime.Now,
                     LogType = SysLogType.Normal,
