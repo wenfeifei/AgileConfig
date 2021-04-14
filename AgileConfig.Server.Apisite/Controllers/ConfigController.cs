@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using AgileConfig.Server.Common;
-using System.IO;
 
 namespace AgileConfig.Server.Apisite.Controllers
 {
@@ -260,7 +259,6 @@ namespace AgileConfig.Server.Apisite.Controllers
             config.Key = model.Key;
             config.Value = model.Value;
             config.Group = model.Group;
-            config.Status = model.Status;
             config.UpdateTime = DateTime.Now;
 
             var result = await _configService.UpdateAsync(config);
@@ -343,22 +341,26 @@ namespace AgileConfig.Server.Apisite.Controllers
         /// <param name="pageIndex"></param>
         /// <returns></returns>
         [HttpGet]
-        public async Task<IActionResult> Search(string appId, string group, string key, int pageSize, int pageIndex)
+        public async Task<IActionResult> Search(string appId, string group, string key, OnlineStatus? onlineStatus, int pageSize = 20, int current = 1)
         {
-            if (pageSize == 0)
+            if (pageSize <= 0)
             {
-                throw new ArgumentException("pageSize can not be 0 .");
+                throw new ArgumentException("pageSize can not less then 1 .");
             }
-            if (pageIndex == 0)
+            if (current <= 0)
             {
-                throw new ArgumentException("pageIndex can not be 0 .");
+                throw new ArgumentException("pageIndex can not less then 1 .");
             }
 
             var configs = await _configService.Search(appId, group, key);
             configs = configs.Where(c => c.Status == ConfigStatus.Enabled).ToList();
+            if (onlineStatus.HasValue)
+            {
+                configs = configs.Where(c => c.OnlineStatus == onlineStatus).ToList();
+            }
             configs = configs.OrderBy(c => c.AppId).ThenBy(c => c.Group).ThenBy(c => c.Key).ToList();
 
-            var page = configs.Skip((pageIndex - 1) * pageSize).Take(pageSize);
+            var page = configs.Skip((current - 1) * pageSize).Take(pageSize).ToList();
             var total = configs.Count();
             var totalPages = total / pageSize;
             if ((total % pageSize) > 0)
@@ -368,9 +370,11 @@ namespace AgileConfig.Server.Apisite.Controllers
 
             return Json(new
             {
+                current,
+                pageSize,
                 success = true,
-                data = page,
-                totalPages
+                total = total,
+                data = page
             });
         }
 
@@ -578,6 +582,64 @@ namespace AgileConfig.Server.Apisite.Controllers
         }
 
         /// <summary>
+        /// 上线多个配置
+        /// </summary>
+        /// <param name="configIds"></param>
+        /// <returns></returns>
+        public async Task<IActionResult> OfflineSome([FromBody] List<string> configIds)
+        {
+            if (configIds == null)
+            {
+                throw new ArgumentNullException("configIds");
+            }
+
+            var nodes = await _serverNodeService.GetAllNodesAsync();
+            foreach (var configId in configIds)
+            {
+                var config = await _configService.GetAsync(configId);
+                if (config == null)
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = "未找到对应的配置项。"
+                    });
+                }
+                if (config.OnlineStatus == OnlineStatus.WaitPublish)
+                {
+                    continue;
+                }
+                config.OnlineStatus = OnlineStatus.WaitPublish;
+                var result = await _configService.UpdateAsync(config);
+                if (result)
+                {
+                    await _sysLogService.AddSysLogAsync(new SysLog
+                    {
+                        LogTime = DateTime.Now,
+                        LogType = SysLogType.Normal,
+                        AppId = config.AppId,
+                        LogText = $"下线配置【Key:{config.Key}】 【Group：{config.Group}】 【AppId：{config.AppId}】"
+                    });
+                    //notice clients the config item is offline
+                    var action = new WebsocketAction { Action = ActionConst.Remove, Item = new ConfigItem { group = config.Group, key = config.Key, value = config.Value } };
+                    foreach (var node in nodes)
+                    {
+                        if (node.Status == NodeStatus.Offline)
+                        {
+                            continue;
+                        }
+                        await _remoteServerNodeProxy.AppClientsDoActionAsync(node.Address, config.AppId, action);
+                    }
+                }
+            }
+            return Json(new
+            {
+                success = true,
+                message = "下线配置成功"
+            });
+        }
+
+        /// <summary>
         /// 下线
         /// </summary>
         /// <param name="configId"></param>
@@ -759,9 +821,10 @@ namespace AgileConfig.Server.Apisite.Controllers
             });
         }
 
-        public IActionResult PreViewJsonFile(List<IFormFile> files)
+        public IActionResult PreViewJsonFile()
         {
-            if (files == null || !files.Any())
+            List<IFormFile> files = Request.Form.Files.ToList();
+            if (!files.Any())
             {
                 return Json(new
                 {
@@ -794,6 +857,7 @@ namespace AgileConfig.Server.Apisite.Controllers
                     config.Description = "";
                     config.Value = dict[key];
                     config.Group = group;
+                    config.Id = Guid.NewGuid().ToString();
                     addConfigs.Add(config);
                 }
 

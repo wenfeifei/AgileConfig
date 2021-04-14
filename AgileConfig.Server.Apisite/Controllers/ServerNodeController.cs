@@ -16,11 +16,15 @@ namespace AgileConfig.Server.Apisite.Controllers
     {
         private readonly IServerNodeService _serverNodeService;
         private readonly ISysLogService _sysLogService;
+        private readonly IRemoteServerNodeProxy _remoteServerNodeProxy;
 
-        public ServerNodeController(IServerNodeService serverNodeService, ISysLogService sysLogService)
+        public ServerNodeController(IServerNodeService serverNodeService,
+            ISysLogService sysLogService,
+            IRemoteServerNodeProxy remoteServerNodeProxy)
         {
             _serverNodeService = serverNodeService;
             _sysLogService = sysLogService;
+            _remoteServerNodeProxy = remoteServerNodeProxy;
         }
 
         [HttpPost]
@@ -56,6 +60,7 @@ namespace AgileConfig.Server.Apisite.Controllers
                     LogType = SysLogType.Normal,
                     LogText = $"新增节点：{node.Address}"
                 });
+                await _remoteServerNodeProxy.TestEchoAsync(node.Address);
             }
            
             return Json(new
@@ -70,6 +75,14 @@ namespace AgileConfig.Server.Apisite.Controllers
         [HttpPost]
         public async Task<IActionResult> Delete([FromBody]ServerNodeVM model)
         {
+            if (Appsettings.IsPreviewMode)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = "演示模式请勿删除节点"
+                });
+            }
             if (model == null)
             {
                 throw new ArgumentNullException("model");
