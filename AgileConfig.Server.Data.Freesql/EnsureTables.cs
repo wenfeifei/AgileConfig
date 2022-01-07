@@ -62,11 +62,16 @@ namespace AgileConfig.Server.Data.Freesql
                 {
                     instance.CodeFirst.SyncStructure<App>();
                     instance.CodeFirst.SyncStructure<Config>();
-                    instance.CodeFirst.SyncStructure<ModifyLog>();
                     instance.CodeFirst.SyncStructure<ServerNode>();
                     instance.CodeFirst.SyncStructure<Setting>();
                     instance.CodeFirst.SyncStructure<SysLog>();
                     instance.CodeFirst.SyncStructure<AppInheritanced>();
+                    instance.CodeFirst.SyncStructure<User>();
+                    instance.CodeFirst.SyncStructure<UserRole>();
+                    instance.CodeFirst.SyncStructure<UserAppAuth>();
+                    instance.CodeFirst.SyncStructure<ConfigPublished>();
+                    instance.CodeFirst.SyncStructure<PublishTimeline>();
+                    instance.CodeFirst.SyncStructure<PublishDetail>();
                 }
                 catch (Exception ex)
                 {

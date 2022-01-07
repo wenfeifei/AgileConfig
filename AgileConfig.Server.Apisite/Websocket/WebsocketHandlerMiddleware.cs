@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -7,11 +6,11 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using AgileConfig.Server.Apisite.Filters;
+using System.Web;
 using AgileConfig.Server.IService;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace AgileConfig.Server.Apisite.Websocket
 {
@@ -40,6 +39,7 @@ namespace AgileConfig.Server.Apisite.Websocket
                 {
                     if (!await appBasicAuth.ValidAsync(context.Request))
                     {
+                        context.Response.StatusCode = 401;
                         await context.Response.WriteAsync("basic auth failed .");
                         return;
                     }
@@ -49,16 +49,51 @@ namespace AgileConfig.Server.Apisite.Websocket
                         var appIdSecret = appBasicAuth.GetAppIdSecret(context.Request);
                         appId = appIdSecret.Item1;
                     }
+                    var env = context.Request.Headers["env"];
+                    if (!string.IsNullOrEmpty(env))
+                    {
+                        env = HttpUtility.UrlDecode(env);
+                    }
+                    else
+                    {
+                        env = "DEV";
+                        _logger.LogInformation("Websocket client request No ENV property , set default DEV ");
+                    }
+                    context.Request.Query.TryGetValue("client_name", out StringValues name);
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        name = HttpUtility.UrlDecode(name);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Websocket client request No Name property ");
+                    }
+                    context.Request.Query.TryGetValue("client_tag", out StringValues tag);
+                    if (!string.IsNullOrEmpty(tag))
+                    {
+                        tag = HttpUtility.UrlDecode(tag);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Websocket client request No TAG property ");
+                    }
                     WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                   
+                    var clientIp = GetRemoteIp(context.Request);
                     var client = new WebsocketClient()
                     {
                         Client = webSocket,
                         Id = Guid.NewGuid().ToString(),
                         AppId = appId,
-                        LastHeartbeatTime = DateTime.Now
+                        LastHeartbeatTime = DateTime.Now,
+                        Name = name,
+                        Tag = tag,
+                        Ip = clientIp.ToString(),
+                        Env = env
                     };
                     _websocketCollection.AddClient(client);
                     _logger.LogInformation("Websocket client {0} Added ", client.Id);
+
                     try
                     {
                         await Handle(context, client, configService);
@@ -67,7 +102,7 @@ namespace AgileConfig.Server.Apisite.Websocket
                     {
                         _logger.LogError(ex, "Handle websocket client {0} err .", client.Id);
                         await _websocketCollection.RemoveClient(client, WebSocketCloseStatus.Empty, ex.Message);
-                        await context.Response.WriteAsync("closed");
+                        await context.Response.WriteAsync("500 closed");
                     }
                 }
                 else
@@ -79,6 +114,25 @@ namespace AgileConfig.Server.Apisite.Websocket
             {
                 await _next(context);
             }
+        }
+
+        public IPAddress GetRemoteIp(HttpRequest httpRequest)
+        {
+            IPAddress ip;
+            var headers = httpRequest.Headers.ToList();
+            if (headers.Exists((kvp) => kvp.Key == "X-Forwarded-For"))
+            {
+                // when running behind a load balancer you can expect this header
+                var header = headers.First((kvp) => kvp.Key == "X-Forwarded-For").Value.ToString();
+                IPAddress.TryParse(header, out ip);
+            }
+            else
+            {
+                // this will always have a value (running locally in development won't have the header)
+                ip = httpRequest.HttpContext.Connection.RemoteIpAddress;
+            }
+
+            return ip;
         }
 
         private async Task Handle(HttpContext context, WebsocketClient socketClient, IConfigService configService)
@@ -94,7 +148,9 @@ namespace AgileConfig.Server.Apisite.Websocket
                 {
                     //如果是ping，回复本地数据的md5版本
                     var appId = context.Request.Headers["appid"];
-                    var md5 = await configService.AppPublishedConfigsMd5CacheWithInheritanced(appId);
+                    var env = context.Request.Headers["env"];
+                    env = await configService.IfEnvEmptySetDefaultAsync(env);
+                    var md5 = await configService.AppPublishedConfigsMd5CacheWithInheritanced(appId, env);
                     await SendMessage(socketClient.Client, $"V:{md5}");
                 }
                 else

@@ -12,8 +12,14 @@ namespace AgileConfig.Server.Data.Freesql
         {
         }
 
+        public IFreeSql Freesql
+        {
+            get;
+        }
+
         public FreeSqlContext(IFreeSql freeSql) : base(freeSql, null)
         {
+            Freesql = freeSql;
         }
 
         public DbSet<App> Apps { get; set; }
@@ -21,14 +27,19 @@ namespace AgileConfig.Server.Data.Freesql
         public DbSet<Config> Configs { get; set; }
 
         public DbSet<ServerNode> ServerNodes { get; set; }
-
-        public DbSet<ModifyLog> ModifyLogs { get; set; }
-
         public DbSet<Setting> Settings { get; set; }
-
         public DbSet<SysLog> SysLogs { get; set; }
 
         public DbSet<AppInheritanced> AppInheritanceds { get; set; }
+
+        public DbSet<User> Users { get; set; }
+        public DbSet<UserRole> UserRoles { get; set; }
+
+        public DbSet<UserAppAuth> UserAppAuths { get; set; }
+
+        public DbSet<ConfigPublished> ConfigPublished { get; set; }
+        public DbSet<PublishDetail> PublishDetail { get; set; }
+        public DbSet<PublishTimeline> PublishTimeline { get; set; }
 
     }
 }

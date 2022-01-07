@@ -1,4 +1,6 @@
 import { getIntl, getLocale } from '@/.umi/plugin-locale/localeExports';
+import AuthorizedEle from '@/components/Authorized/AuthorizedElement';
+import functionKeys from '@/models/functionKeys';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-layout';
 import ProTable, { ActionType, ProColumns } from '@ant-design/pro-table';
@@ -62,7 +64,8 @@ const clients:React.FC = () => {
     const arr:any[] = [];
     result.data.forEach((x:{address:string})=>{
        arr.push({
-         value: x.address
+         value: x.address,
+         label: x.address,
        });
     });
 
@@ -112,15 +115,30 @@ const clients:React.FC = () => {
       hideInSearch: true,
     },
     {
-      title: intl.formatMessage({
-        id: 'pages.client.table.cols.appname'
-      }),
-      dataIndex: 'appId',
-      valueType: 'select',
-      valueEnum: appEnums,
+      title: '环境',
+      dataIndex: 'env',
       hideInSearch: true,
     },
-    
+    {
+      title: intl.formatMessage({
+        id: 'pages.client.table.cols.ip'
+      }),
+      dataIndex: 'ip',
+      hideInSearch: true,
+    },
+    {
+      title: intl.formatMessage({
+        id: 'pages.client.table.cols.name'
+      }),
+      dataIndex: 'name',
+      hideInSearch: true,
+    },{
+      title: intl.formatMessage({
+        id: 'pages.client.table.cols.tag'
+      }),
+      dataIndex: 'tag',
+      hideInSearch: true,
+    },
     {
       title: intl.formatMessage({
         id: 'pages.client.table.cols.action'
@@ -138,31 +156,33 @@ const clients:React.FC = () => {
             })
           }
         </a>,
-        <Button type="link" danger onClick={
-         ()=>{
-          const msg = intl.formatMessage({
-                        id: 'pages.client.disconnect_message'
-                      }) + `【${record.id}】`;
-          confirm({
-            icon: <ExclamationCircleOutlined />,
-            content: msg,
-            async onOk() {
-              console.log('disconnect client ' + record.id);
-              const success = await handleClientOffline(record);
-              if (success) {
-                actionRef.current?.reload();
-              }
-            },
-            onCancel() {
-            },
-          });
-          }}>
-           {
-             intl.formatMessage({
-              id: 'pages.client.table.cols.action.disconnect'
-            })
-           }
-        </Button>
+        <AuthorizedEle judgeKey={functionKeys.Client_Disconnect}>
+          <Button type="link" danger onClick={
+          ()=>{
+            const msg = intl.formatMessage({
+                          id: 'pages.client.disconnect_message'
+                        }) + `【${record.id}】`;
+            confirm({
+              icon: <ExclamationCircleOutlined />,
+              content: msg,
+              async onOk() {
+                console.log('disconnect client ' + record.id);
+                const success = await handleClientOffline(record);
+                if (success) {
+                  actionRef.current?.reload();
+                }
+              },
+              onCancel() {
+              },
+            });
+            }}>
+            {
+              intl.formatMessage({
+                id: 'pages.client.table.cols.action.disconnect'
+              })
+            }
+          </Button>
+        </AuthorizedEle>
       ]
     }
   ];

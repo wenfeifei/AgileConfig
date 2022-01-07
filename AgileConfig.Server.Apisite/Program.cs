@@ -31,19 +31,13 @@ namespace AgileConfig.Server.Apisite
             var host = CreateWebHostBuilder(args)
                 .Build();
 
-            var sp = host.Services;
-            sp.GetService<IRemoteServerNodeProxy>().TestEchoAsync();
-
             host.Run();
         }
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) 
         {
             return WebHost.CreateDefaultBuilder(args)
-                  .UseKestrel(ks =>
-                  {
-                      ks.ListenAnyIP(5000);
-                  })
+                  .UseConfiguration(Global.Config)
                   .UseNLog()
                   .UseStartup<Startup>();
         }

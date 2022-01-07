@@ -19,7 +19,7 @@ namespace AgileConfig.Server.Service
             _dbContext = context;
         }
 
-        public async Task<bool> AddRangeAsync(List<SysLog> logs)
+        public async Task<bool> AddRangeAsync(IEnumerable<SysLog> logs)
         {
             await _dbContext.SysLogs.AddRangeAsync(logs);
             int x = await _dbContext.SaveChangesAsync();
@@ -56,6 +56,11 @@ namespace AgileConfig.Server.Service
             var count = await query.CountAsync();
 
             return count;
+        }
+
+        public void Dispose()
+        {
+            _dbContext.Dispose();
         }
 
         public Task<List<SysLog>> SearchPage(string appId, SysLogType? logType, DateTime? startTime, DateTime? endTime, int pageSize, int pageIndex)

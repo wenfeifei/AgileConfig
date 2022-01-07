@@ -10,13 +10,14 @@ export type JsonImportFormProps = {
     appId: string,
     appName: string,
     jsonImportModalVisible: boolean;
+    env: string,
     onCancel: () => void;
     onSaveSuccess: ()=> void;
   };
-  const handleSave = async ( items: JsonImportItem[]) => {
+  const handleSave = async ( items: JsonImportItem[], env: string) => {
     const hide = message.loading('正在导入');
     try {
-      const result = await addRangeConfig(items);
+      const result = await addRangeConfig(items, env);
       hide();
       const success = result.success;
       if (success) {
@@ -97,7 +98,7 @@ const JsonImport : React.FC<JsonImportFormProps> = (props)=>{
       };
     return (
         <Modal 
-          title={intl.formatMessage({id:'pages.configs.table.cols.action.importfromjosnfile'})} 
+          title={intl.formatMessage({id:'pages.configs.table.cols.action.pop.importfromjosnfile'})} 
           width={1000} 
           visible={props.jsonImportModalVisible}
           onCancel={
@@ -107,7 +108,7 @@ const JsonImport : React.FC<JsonImportFormProps> = (props)=>{
           }
           onOk={
             async ()=> {
-              const result = await handleSave(datasource);
+              const result = await handleSave(datasource, props.env);
               if (result) {
                 props.onSaveSuccess();
               }

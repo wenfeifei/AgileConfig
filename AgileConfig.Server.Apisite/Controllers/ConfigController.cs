@@ -6,11 +6,14 @@ using AgileConfig.Server.Apisite.Models;
 using AgileConfig.Server.Data.Entity;
 using AgileConfig.Server.IService;
 using Microsoft.AspNetCore.Mvc;
-using Agile.Config.Protocol;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using AgileConfig.Server.Common;
+using System.Text;
+using System.Dynamic;
+using System.IO;
+using AgileConfig.Server.Apisite.Utilites;
 
 namespace AgileConfig.Server.Apisite.Controllers
 {
@@ -19,35 +22,29 @@ namespace AgileConfig.Server.Apisite.Controllers
     public class ConfigController : Controller
     {
         private readonly IConfigService _configService;
-        private readonly IModifyLogService _modifyLogService;
-        private readonly IRemoteServerNodeProxy _remoteServerNodeProxy;
-        private readonly IServerNodeService _serverNodeService;
-        private readonly ISysLogService _sysLogService;
         private readonly IAppService _appService;
+        private readonly IUserService _userService;
 
         public ConfigController(
-                                IConfigService configService,
-                                IModifyLogService modifyLogService,
-                                IRemoteServerNodeProxy remoteServerNodeProxy,
-                                IServerNodeService serverNodeService,
-                                ISysLogService sysLogService,
-                                 IAppService appService)
+            IConfigService configService,
+            IAppService appService,
+            IUserService userService)
         {
             _configService = configService;
-            _modifyLogService = modifyLogService;
-            _remoteServerNodeProxy = remoteServerNodeProxy;
-            _serverNodeService = serverNodeService;
-            _sysLogService = sysLogService;
             _appService = appService;
+            _userService = userService;
         }
 
+        [TypeFilter(typeof(PremissionCheckAttribute), Arguments = new object[] { "Config.Add", Functions.Config_Add })]
         [HttpPost]
-        public async Task<IActionResult> Add([FromBody] ConfigVM model)
+        public async Task<IActionResult> Add([FromBody] ConfigVM model, [FromQuery] string env)
         {
             if (model == null)
             {
                 throw new ArgumentNullException("model");
             }
+
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
 
             var app = await _appService.GetAsync(model.AppId);
             if (app == null)
@@ -59,10 +56,9 @@ namespace AgileConfig.Server.Apisite.Controllers
                 });
             }
 
-            var oldConfig = await _configService.GetByAppIdKey(model.AppId, model.Group, model.Key);
+            var oldConfig = await _configService.GetByAppIdKeyEnv(model.AppId, model.Group, model.Key, env);
             if (oldConfig != null)
             {
-
                 return Json(new
                 {
                     success = false,
@@ -81,29 +77,17 @@ namespace AgileConfig.Server.Apisite.Controllers
             config.CreateTime = DateTime.Now;
             config.UpdateTime = null;
             config.OnlineStatus = OnlineStatus.WaitPublish;
+            config.EditStatus = EditStatus.Add;
+            config.Env = env;
 
-            var result = await _configService.AddAsync(config);
+            var result = await _configService.AddAsync(config, env);
 
             if (result)
             {
-                //add syslog
-                await _sysLogService.AddSysLogAsync(new SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = SysLogType.Normal,
-                    AppId = config.AppId,
-                    LogText = $"新增配置【Key：{config.Key}】【Value：{config.Value}】【Group：{config.Group}】【AppId：{config.AppId}】"
-                });
-                //add modify log 
-                await _modifyLogService.AddAsync(new ModifyLog
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    ConfigId = config.Id,
-                    Key = config.Key,
-                    Group = config.Group,
-                    Value = config.Value,
-                    ModifyTime = config.CreateTime
-                });
+                dynamic param = new ExpandoObject();
+                param.config = config;
+                param.userName = this.GetCurrentUserName();
+                TinyEventBus.Instance.Fire(EventKeys.ADD_CONFIG_SUCCESS, param);
             }
 
             return Json(new
@@ -111,28 +95,25 @@ namespace AgileConfig.Server.Apisite.Controllers
                 success = result,
                 message = !result ? "新建配置失败，请查看错误日志" : "",
                 data = config
-            }) ;
+            });
         }
+
+        [TypeFilter(typeof(PremissionCheckAttribute),
+            Arguments = new object[] { "Config.AddRange", Functions.Config_Add })]
         [HttpPost]
-        public async Task<IActionResult> AddRange([FromBody] List<ConfigVM> model)
+        public async Task<IActionResult> AddRange([FromBody] List<ConfigVM> model, [FromQuery] string env)
         {
             if (model == null || model.Count == 0)
             {
                 throw new ArgumentNullException("model");
             }
 
-            var configs = await _configService.GetByAppId(model.First().AppId);
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var configs = await _configService.GetByAppIdAsync(model.First().AppId, env);
 
             var oldDict = new Dictionary<string, string>();
-            configs.ForEach(item =>
-            {
-                var newkey = item.Key;
-                if (!string.IsNullOrEmpty(item.Group))
-                {
-                    newkey = $"{item.Group}:{item.Key}";
-                }
-                oldDict.Add(newkey, item.Value);
-            });
+            configs.ForEach(item => { oldDict.Add(_configService.GenerateKey(item), item.Value); });
 
             var addConfigs = new List<Config>();
             //judge if json key already in configs
@@ -143,6 +124,7 @@ namespace AgileConfig.Server.Apisite.Controllers
                 {
                     newkey = $"{item.Group}:{item.Key}";
                 }
+
                 if (oldDict.ContainsKey(newkey))
                 {
                     return Json(new
@@ -163,41 +145,24 @@ namespace AgileConfig.Server.Apisite.Controllers
                 config.CreateTime = DateTime.Now;
                 config.UpdateTime = null;
                 config.OnlineStatus = OnlineStatus.WaitPublish;
+                config.EditStatus = EditStatus.Add;
+                config.Env = env;
+
                 addConfigs.Add(config);
             }
 
-            var result = await _configService.AddRangeAsync(addConfigs);
+            var result = await _configService.AddRangeAsync(addConfigs, env);
 
             if (result)
             {
-                //add syslogs
-                var addSysLogs = new List<SysLog>();
+                var userName = this.GetCurrentUserName();
                 addConfigs.ForEach(c =>
                 {
-                    addSysLogs.Add(new SysLog
-                    {
-                        LogTime = DateTime.Now,
-                        LogType = SysLogType.Normal,
-                        AppId = c.AppId,
-                        LogText = $"新增配置【Key：{c.Key}】【Value：{c.Value}】【Group：{c.Group}】【AppId：{c.AppId}】"
-                    });
+                    dynamic param = new ExpandoObject();
+                    param.config = c;
+                    param.userName = userName;
+                    TinyEventBus.Instance.Fire(EventKeys.ADD_CONFIG_SUCCESS, param);
                 });
-                await _sysLogService.AddRangeAsync(addSysLogs);
-                //add modify log 
-                var addModifyLogs = new List<ModifyLog>();
-                addConfigs.ForEach(c =>
-                {
-                    addModifyLogs.Add(new ModifyLog
-                    {
-                        Id = Guid.NewGuid().ToString("N"),
-                        ConfigId = c.Id,
-                        Key = c.Key,
-                        Group = c.Group,
-                        Value = c.Value,
-                        ModifyTime = c.CreateTime
-                    });
-                });
-                await _modifyLogService.AddRangAsync(addModifyLogs);
             }
 
             return Json(new
@@ -207,15 +172,19 @@ namespace AgileConfig.Server.Apisite.Controllers
             });
         }
 
+        [TypeFilter(typeof(PremissionCheckAttribute),
+            Arguments = new object[] { "Config.Edit", Functions.Config_Edit })]
         [HttpPost]
-        public async Task<IActionResult> Edit([FromBody] ConfigVM model)
+        public async Task<IActionResult> Edit([FromBody] ConfigVM model, [FromQuery] string env)
         {
             if (model == null)
             {
                 throw new ArgumentNullException("model");
             }
 
-            var config = await _configService.GetAsync(model.Id);
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var config = await _configService.GetAsync(model.Id, env);
             if (config == null)
             {
                 return Json(new
@@ -225,7 +194,7 @@ namespace AgileConfig.Server.Apisite.Controllers
                 });
             }
 
-            var app = await _configService.GetByAppId(model.AppId);
+            var app = await _configService.GetByAppIdAsync(model.AppId, env);
             if (!app.Any())
             {
                 return Json(new
@@ -243,7 +212,7 @@ namespace AgileConfig.Server.Apisite.Controllers
             };
             if (config.Group != model.Group || config.Key != model.Key)
             {
-                var anotherConfig = await _configService.GetByAppIdKey(model.AppId, model.Group, model.Key);
+                var anotherConfig = await _configService.GetByAppIdKeyEnv(model.AppId, model.Group, model.Key, env);
                 if (anotherConfig != null)
                 {
                     return Json(new
@@ -260,45 +229,34 @@ namespace AgileConfig.Server.Apisite.Controllers
             config.Value = model.Value;
             config.Group = model.Group;
             config.UpdateTime = DateTime.Now;
+            config.Env = env;
 
-            var result = await _configService.UpdateAsync(config);
-
-            if (result && !IsOnlyUpdateDescription(config, oldConfig))
+            if (!IsOnlyUpdateDescription(config, oldConfig))
             {
-                //add modify log 
-                await _modifyLogService.AddAsync(new ModifyLog
+                var isPublished = await _configService.IsPublishedAsync(config.Id, env);
+                if (isPublished)
                 {
-                    Id = Guid.NewGuid().ToString("N"),
-                    ConfigId = config.Id,
-                    Key = config.Key,
-                    Group = config.Group,
-                    Value = config.Value,
-                    ModifyTime = config.UpdateTime.Value
-                });
-                //syslog
-                await _sysLogService.AddSysLogAsync(new SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = SysLogType.Normal,
-                    AppId = config.AppId,
-                    LogText = $"编辑配置【Key:{config.Key}】【Value：{config.Value}】【Group：{config.Group}】【AppId：{config.AppId}】"
-                });
-                //notice clients
-                var action = new WebsocketAction
-                {
-                    Action = ActionConst.Update,
-                    Item = new ConfigItem { group = config.Group, key = config.Key, value = config.Value },
-                    OldItem = new ConfigItem { group = oldConfig.Group, key = oldConfig.Key, value = oldConfig.Value }
-                };
-                var nodes = await _serverNodeService.GetAllNodesAsync();
-                foreach (var node in nodes)
-                {
-                    if (node.Status == NodeStatus.Offline)
-                    {
-                        continue;
-                    }
-                    await _remoteServerNodeProxy.AppClientsDoActionAsync(node.Address, config.AppId, action);
+                    //如果是已发布的配置，修改后状态设置为编辑
+                    config.EditStatus = EditStatus.Edit;
                 }
+                else
+                {
+                    //如果没有发布，说明是新增的，一直维持新增状态
+                    config.EditStatus = EditStatus.Add;
+                }
+
+                config.OnlineStatus = OnlineStatus.WaitPublish;
+            }
+
+            var result = await _configService.UpdateAsync(config, env);
+
+            if (result)
+            {
+                dynamic param = new ExpandoObject();
+                param.config = config;
+                param.userName = this.GetCurrentUserName();
+                param.oldConfig = config;
+                TinyEventBus.Instance.Fire(EventKeys.EDIT_CONFIG_SUCCESS, param);
             }
 
             return Json(new
@@ -316,13 +274,16 @@ namespace AgileConfig.Server.Apisite.Controllers
         /// <returns></returns>
         private bool IsOnlyUpdateDescription(Config newConfig, Config oldConfig)
         {
-            return newConfig.Key == oldConfig.Key && newConfig.Group == oldConfig.Group && newConfig.Value == oldConfig.Value;
+            return newConfig.Key == oldConfig.Key && newConfig.Group == oldConfig.Group &&
+                   newConfig.Value == oldConfig.Value;
         }
 
         [HttpGet]
-        public async Task<IActionResult> All()
+        public async Task<IActionResult> All(string env)
         {
-            var configs = await _configService.GetAllConfigsAsync();
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var configs = await _configService.GetAllConfigsAsync(env);
 
             return Json(new
             {
@@ -334,39 +295,62 @@ namespace AgileConfig.Server.Apisite.Controllers
         /// <summary>
         /// 按多条件进行搜索
         /// </summary>
-        /// <param name="appId"></param>
-        /// <param name="group"></param>
-        /// <param name="key"></param>
-        /// <param name="pageSize"></param>
-        /// <param name="pageIndex"></param>
+        /// <param name="appId">应用id</param>
+        /// <param name="group">分组</param>
+        /// <param name="key">键</param>
+        /// <param name="onlineStatus">在线状态</param>
+        /// <param name="pageSize">分页大小</param>
+        /// <param name="current">当前页</param>
         /// <returns></returns>
         [HttpGet]
-        public async Task<IActionResult> Search(string appId, string group, string key, OnlineStatus? onlineStatus, int pageSize = 20, int current = 1)
+        public async Task<IActionResult> Search(string appId, string group, string key, OnlineStatus? onlineStatus,
+            string sortField, string ascOrDesc, string env, int pageSize = 20, int current = 1)
         {
             if (pageSize <= 0)
             {
                 throw new ArgumentException("pageSize can not less then 1 .");
             }
+
             if (current <= 0)
             {
                 throw new ArgumentException("pageIndex can not less then 1 .");
             }
 
-            var configs = await _configService.Search(appId, group, key);
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var configs = await _configService.Search(appId, group, key, env);
             configs = configs.Where(c => c.Status == ConfigStatus.Enabled).ToList();
             if (onlineStatus.HasValue)
             {
                 configs = configs.Where(c => c.OnlineStatus == onlineStatus).ToList();
             }
-            configs = configs.OrderBy(c => c.AppId).ThenBy(c => c.Group).ThenBy(c => c.Key).ToList();
+
+            if (sortField == "createTime")
+            {
+                if (ascOrDesc.StartsWith("asc"))
+                {
+                    configs = configs.OrderBy(x => x.CreateTime).ToList();
+                }
+                else
+                {
+                    configs = configs.OrderByDescending(x => x.CreateTime).ToList();
+                }
+            }
+
+            if (sortField == "group")
+            {
+                if (ascOrDesc.StartsWith("asc"))
+                {
+                    configs = configs.OrderBy(x => x.Group).ToList();
+                }
+                else
+                {
+                    configs = configs.OrderByDescending(x => x.Group).ToList();
+                }
+            }
 
             var page = configs.Skip((current - 1) * pageSize).Take(pageSize).ToList();
             var total = configs.Count();
-            var totalPages = total / pageSize;
-            if ((total % pageSize) > 0)
-            {
-                totalPages++;
-            }
 
             return Json(new
             {
@@ -379,14 +363,16 @@ namespace AgileConfig.Server.Apisite.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get(string id)
+        public async Task<IActionResult> Get(string id, string env)
         {
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id");
             }
 
-            var config = await _configService.GetAsync(id);
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var config = await _configService.GetAsync(id, env);
 
             return Json(new
             {
@@ -396,15 +382,19 @@ namespace AgileConfig.Server.Apisite.Controllers
             });
         }
 
+        [TypeFilter(typeof(PremissionCheckAttribute),
+            Arguments = new object[] { "Config.Delete", Functions.Config_Delete })]
         [HttpPost]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(string id, string env)
         {
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id");
             }
 
-            var config = await _configService.GetAsync(id);
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var config = await _configService.GetAsync(id, env);
             if (config == null)
             {
                 return Json(new
@@ -414,147 +404,110 @@ namespace AgileConfig.Server.Apisite.Controllers
                 });
             }
 
-            config.Status = ConfigStatus.Deleted;
+            config.EditStatus = EditStatus.Deleted;
+            config.OnlineStatus = OnlineStatus.WaitPublish;
 
-            var result = await _configService.UpdateAsync(config);
+            var isPublished = await _configService.IsPublishedAsync(config.Id, env);
+            if (!isPublished)
+            {
+                //如果已经没有发布过直接删掉
+                config.Status = ConfigStatus.Deleted;
+            }
 
+            var result = await _configService.UpdateAsync(config, env);
             if (result)
             {
-                //add syslog
-                await _sysLogService.AddSysLogAsync(new SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = SysLogType.Normal,
-                    AppId = config.AppId,
-                    LogText = $"删除配置【Key:{config.Key}】【Value：{config.Value}】【Group：{config.Group}】【AppId：{config.AppId}】"
-                });
-                //notice clients
-                var action = await CreateRemoveWebsocketAction(config, config.AppId);
-                var nodes = await _serverNodeService.GetAllNodesAsync();
-                foreach (var node in nodes)
-                {
-                    if (node.Status == NodeStatus.Offline)
-                    {
-                        continue;
-                    }
-                    await _remoteServerNodeProxy.AppClientsDoActionAsync(node.Address, config.AppId, action);
-                }
-
+                dynamic param = new ExpandoObject();
+                param.config = config;
+                param.userName = this.GetCurrentUserName();
+                TinyEventBus.Instance.Fire(EventKeys.DELETE_CONFIG_SUCCESS, param);
             }
 
             return Json(new
             {
                 success = result,
-                message = !result ? "修改配置失败，请查看错误日志" : ""
+                message = !result ? "删除配置失败，请查看错误日志" : ""
             });
         }
 
-        private async Task<WebsocketAction> CreateRemoveWebsocketAction(Config oldConfig, string appId)
-        {
-            //获取app此时的配置列表合并继承的app配置 字典
-            var configs = await _configService.GetPublishedConfigsByAppIdWithInheritanced_Dictionary(appId);
-            var oldKey = _configService.GenerateKey(oldConfig);
-            //如果oldkey已经不存在，返回remove的action
-            if (!configs.ContainsKey(oldKey))
-            {
-                var action = new WebsocketAction { Action = ActionConst.Remove, Item = new ConfigItem { group = oldConfig.Group, key = oldConfig.Key, value = oldConfig.Value } };
-                return action;
-            }
-            else
-            {
-                //如果还在，那么说明有继承的app的配置项目的key跟oldkey一样，那么使用继承的配置的值
-                //返回update的action
-                var config = configs[oldKey];
-                var action = new WebsocketAction
-                {
-                    Action = ActionConst.Update,
-                    Item = new ConfigItem { group = config.Group, key = config.Key, value = config.Value },
-                    OldItem = new ConfigItem { group = oldConfig.Group, key = oldConfig.Key, value = oldConfig.Value }
-                };
-
-                return action;
-            }
-        }
-
+        [TypeFilter(typeof(PremissionCheckAttribute),
+            Arguments = new object[] { "Config.DeleteSome", Functions.Config_Delete })]
         [HttpPost]
-        public async Task<IActionResult> Rollback(string configId, string logId)
+        public async Task<IActionResult> DeleteSome([FromBody] List<string> ids, string env)
         {
-            if (string.IsNullOrEmpty(configId))
+            if (ids == null)
             {
-                throw new ArgumentNullException("configId");
-            }
-            if (string.IsNullOrEmpty(logId))
-            {
-                throw new ArgumentNullException("logId");
+                throw new ArgumentNullException("ids");
             }
 
-            var config = await _configService.GetAsync(configId);
-            if (config == null)
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            List<Config> deleteConfigs = new List<Config>();
+
+            foreach (var id in ids)
             {
-                return Json(new
+                var config = await _configService.GetAsync(id, env);
+                if (config == null)
                 {
-                    success = false,
-                    message = "未找到对应的配置项。"
-                });
-            }
-            var oldConfig = new Config
-            {
-                Key = config.Key,
-                Group = config.Group,
-                Value = config.Value
-            };
+                    return Json(new
+                    {
+                        success = false,
+                        message = "未找到对应的配置项。"
+                    });
+                }
 
-            var log = await _modifyLogService.GetAsync(logId);
-            if (config == null)
-            {
-                return Json(new
+                config.EditStatus = EditStatus.Deleted;
+                config.OnlineStatus = OnlineStatus.WaitPublish;
+
+                var isPublished = await _configService.IsPublishedAsync(config.Id, env);
+                if (!isPublished)
                 {
-                    success = false,
-                    message = "未找到对应的配置项的历史记录项。"
-                });
-            }
-            config.Key = log.Key;
-            config.Group = log.Group;
-            config.Value = log.Value;
-            config.UpdateTime = DateTime.Now;
+                    //如果已经没有发布过直接删掉
+                    config.Status = ConfigStatus.Deleted;
+                }
 
-            var result = await _configService.UpdateAsync(config);
+                deleteConfigs.Add(config);
+            }
+
+            var result = await _configService.UpdateAsync(deleteConfigs, env);
             if (result)
             {
-                //add modify log 
-                await _modifyLogService.AddAsync(new ModifyLog
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    ConfigId = config.Id,
-                    Key = config.Key,
-                    Group = config.Group,
-                    Value = config.Value,
-                    ModifyTime = config.UpdateTime.Value
-                });
-                //add syslog
-                await _sysLogService.AddSysLogAsync(new SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = SysLogType.Normal,
-                    AppId = config.AppId,
-                    LogText = $"回滚配置【Key:{config.Key}】 【Group：{config.Group}】 【AppId：{config.AppId}】至历史记录：{logId}"
-                });
-                //notice clients
-                var action = new WebsocketAction
-                {
-                    Action = ActionConst.Update,
-                    Item = new ConfigItem { group = config.Group, key = config.Key, value = config.Value },
-                    OldItem = new ConfigItem { group = oldConfig.Group, key = oldConfig.Key, value = oldConfig.Value }
-                };
-                var nodes = await _serverNodeService.GetAllNodesAsync();
-                foreach (var node in nodes)
-                {
-                    if (node.Status == NodeStatus.Offline)
-                    {
-                        continue;
-                    }
-                    await _remoteServerNodeProxy.AppClientsDoActionAsync(node.Address, config.AppId, action);
-                }
+                dynamic param = new ExpandoObject();
+                param.userName = this.GetCurrentUserName();
+                param.appId = deleteConfigs.First().AppId;
+                param.env = env;
+                TinyEventBus.Instance.Fire(EventKeys.DELETE_CONFIG_SOME_SUCCESS, param);
+            }
+
+            return Json(new
+            {
+                success = result,
+                message = !result ? "删除配置失败，请查看错误日志" : ""
+            });
+        }
+
+
+        [TypeFilter(typeof(PremissionCheckAttribute),
+            Arguments = new object[] { "Config.Rollback", Functions.Config_Publish })]
+        [HttpPost]
+        public async Task<IActionResult> Rollback(string publishTimelineId, string env)
+        {
+            if (string.IsNullOrEmpty(publishTimelineId))
+            {
+                throw new ArgumentNullException("publishTimelineId");
+            }
+
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var result = await _configService.RollbackAsync(publishTimelineId, env);
+
+            if (result)
+            {
+                dynamic param = new ExpandoObject();
+                param.userName = this.GetCurrentUserName();
+                param.timelineNode = await _configService.GetPublishTimeLineNodeAsync(publishTimelineId, env);
+                param.env = env;
+                TinyEventBus.Instance.Fire(EventKeys.ROLLBACK_CONFIG_SUCCESS, param);
             }
 
             return Json(new
@@ -565,262 +518,83 @@ namespace AgileConfig.Server.Apisite.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ModifyLogs(string configId)
+        public async Task<IActionResult> ConfigPublishedHistory(string configId, string env)
         {
             if (string.IsNullOrEmpty(configId))
             {
                 throw new ArgumentNullException("configId");
             }
 
-            var logs = await _modifyLogService.Search(configId);
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var configPublishedHistory = await _configService.GetConfigPublishedHistory(configId, env);
+            var result = new List<object>();
+
+            foreach (var publishDetail in configPublishedHistory.OrderByDescending(x => x.Version))
+            {
+                var timelineNode =
+                    await _configService.GetPublishTimeLineNodeAsync(publishDetail.PublishTimelineId, env);
+                result.Add(new
+                {
+                    timelineNode,
+                    config = publishDetail
+                });
+            }
 
             return Json(new
             {
                 success = true,
-                data = logs.OrderByDescending(l => l.ModifyTime).ToList()
-            }); ;
-        }
-
-        /// <summary>
-        /// 上线多个配置
-        /// </summary>
-        /// <param name="configIds"></param>
-        /// <returns></returns>
-        public async Task<IActionResult> OfflineSome([FromBody] List<string> configIds)
-        {
-            if (configIds == null)
-            {
-                throw new ArgumentNullException("configIds");
-            }
-
-            var nodes = await _serverNodeService.GetAllNodesAsync();
-            foreach (var configId in configIds)
-            {
-                var config = await _configService.GetAsync(configId);
-                if (config == null)
-                {
-                    return Json(new
-                    {
-                        success = false,
-                        message = "未找到对应的配置项。"
-                    });
-                }
-                if (config.OnlineStatus == OnlineStatus.WaitPublish)
-                {
-                    continue;
-                }
-                config.OnlineStatus = OnlineStatus.WaitPublish;
-                var result = await _configService.UpdateAsync(config);
-                if (result)
-                {
-                    await _sysLogService.AddSysLogAsync(new SysLog
-                    {
-                        LogTime = DateTime.Now,
-                        LogType = SysLogType.Normal,
-                        AppId = config.AppId,
-                        LogText = $"下线配置【Key:{config.Key}】 【Group：{config.Group}】 【AppId：{config.AppId}】"
-                    });
-                    //notice clients the config item is offline
-                    var action = new WebsocketAction { Action = ActionConst.Remove, Item = new ConfigItem { group = config.Group, key = config.Key, value = config.Value } };
-                    foreach (var node in nodes)
-                    {
-                        if (node.Status == NodeStatus.Offline)
-                        {
-                            continue;
-                        }
-                        await _remoteServerNodeProxy.AppClientsDoActionAsync(node.Address, config.AppId, action);
-                    }
-                }
-            }
-            return Json(new
-            {
-                success = true,
-                message = "下线配置成功"
+                data = result
             });
+            ;
         }
 
         /// <summary>
-        /// 下线
+        /// 发布所有待发布的配置项
         /// </summary>
-        /// <param name="configId"></param>
         /// <returns></returns>
+        [TypeFilter(typeof(PremissionCheckAttribute),
+            Arguments = new object[] { "Config.Publish", Functions.Config_Publish })]
         [HttpPost]
-        public async Task<IActionResult> Offline(string configId)
+        public async Task<IActionResult> Publish([FromBody] PublishLogVM model, string env)
         {
-            if (string.IsNullOrEmpty(configId))
+            if (model == null)
             {
-                throw new ArgumentNullException("configId");
+                throw new ArgumentNullException("model");
             }
 
-            var config = await _configService.GetAsync(configId);
-            if (config == null)
+            if (string.IsNullOrEmpty(model.AppId))
             {
-                return Json(new
-                {
-                    success = false,
-                    message = "未找到对应的配置项。"
-                });
+                throw new ArgumentNullException("appId");
             }
-            config.OnlineStatus = OnlineStatus.WaitPublish;
-            var result = await _configService.UpdateAsync(config);
-            if (result)
+
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var appId = model.AppId;
+            var userId = await this.GetCurrentUserId(_userService);
+            var ret = _configService.Publish(appId, model.Log, userId, env);
+
+            if (ret.result)
             {
-                await _sysLogService.AddSysLogAsync(new SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = SysLogType.Normal,
-                    AppId = config.AppId,
-                    LogText = $"下线配置【Key:{config.Key}】 【Group：{config.Group}】 【AppId：{config.AppId}】"
-                });
-                //notice clients the config item is offline
-                var action = new WebsocketAction { Action = ActionConst.Remove, Item = new ConfigItem { group = config.Group, key = config.Key, value = config.Value } };
-                var nodes = await _serverNodeService.GetAllNodesAsync();
-                foreach (var node in nodes)
-                {
-                    if (node.Status == NodeStatus.Offline)
-                    {
-                        continue;
-                    }
-                    await _remoteServerNodeProxy.AppClientsDoActionAsync(node.Address, config.AppId, action);
-                }
+                var timelineNode = await _configService.GetPublishTimeLineNodeAsync(ret.publishTimelineId, env);
+                dynamic param = new ExpandoObject();
+                param.publishTimelineNode = timelineNode;
+                param.userName = this.GetCurrentUserName();
+                param.env = env;
+                TinyEventBus.Instance.Fire(EventKeys.PUBLISH_CONFIG_SUCCESS, param);
             }
 
             return Json(new
             {
-                success = result,
-                message = !result ? "下线配置失败，请查看错误日志" : ""
-            });
-        }
-
-
-        /// <summary>
-        /// 上线多个配置
-        /// </summary>
-        /// <param name="configIds"></param>
-        /// <returns></returns>
-        public async Task<IActionResult> PublishSome([FromBody] List<string> configIds)
-        {
-            if (configIds == null)
-            {
-                throw new ArgumentNullException("configIds");
-            }
-
-            var nodes = await _serverNodeService.GetAllNodesAsync();
-            foreach (var configId in configIds)
-            {
-                var config = await _configService.GetAsync(configId);
-                if (config == null)
-                {
-                    return Json(new
-                    {
-                        success = false,
-                        message = "未找到对应的配置项。"
-                    });
-                }
-                if (config.OnlineStatus == OnlineStatus.Online)
-                {
-                    continue;
-                }
-                config.OnlineStatus = OnlineStatus.Online;
-                var result = await _configService.UpdateAsync(config);
-                if (result)
-                {
-                    await _sysLogService.AddSysLogAsync(new SysLog
-                    {
-                        LogTime = DateTime.Now,
-                        LogType = SysLogType.Normal,
-                        AppId = config.AppId,
-                        LogText = $"上线配置【Key:{config.Key}】 【Group：{config.Group}】 【AppId：{config.AppId}】"
-                    });
-                    //notice clients config item is published
-                    var action = new WebsocketAction
-                    {
-                        Action = ActionConst.Add,
-                        Item = new ConfigItem { group = config.Group, key = config.Key, value = config.Value }
-                    };
-                    foreach (var node in nodes)
-                    {
-                        if (node.Status == NodeStatus.Offline)
-                        {
-                            continue;
-                        }
-                        await _remoteServerNodeProxy.AppClientsDoActionAsync(node.Address, config.AppId, action);
-                    }
-                }
-            }
-            return Json(new
-            {
-                success = true,
-                message = "上线配置成功"
+                success = ret.result,
+                message = !ret.result ? "上线配置失败，请查看错误日志" : ""
             });
         }
 
         /// <summary>
-        /// 上线1个配置
+        /// 预览上传的json文件
         /// </summary>
-        /// <param name="configId"></param>
         /// <returns></returns>
-        [HttpPost]
-        public async Task<IActionResult> Publish(string configId)
-        {
-            if (string.IsNullOrEmpty(configId))
-            {
-                throw new ArgumentNullException("configId");
-            }
-
-            var config = await _configService.GetAsync(configId);
-            if (config == null)
-            {
-                return Json(new
-                {
-                    success = false,
-                    message = "未找到对应的配置项。"
-                });
-            }
-
-            if (config.OnlineStatus == OnlineStatus.Online)
-            {
-                return Json(new
-                {
-                    success = false,
-                    message = "该配置已上线"
-                });
-            }
-
-            config.OnlineStatus = OnlineStatus.Online;
-            var result = await _configService.UpdateAsync(config);
-            if (result)
-            {
-                await _sysLogService.AddSysLogAsync(new SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = SysLogType.Normal,
-                    AppId = config.AppId,
-                    LogText = $"上线配置【Key:{config.Key}】 【Group：{config.Group}】 【AppId：{config.AppId}】"
-                });
-                //notice clients config item is published
-                var action = new WebsocketAction
-                {
-                    Action = ActionConst.Add,
-                    Item = new ConfigItem { group = config.Group, key = config.Key, value = config.Value }
-                };
-                var nodes = await _serverNodeService.GetAllNodesAsync();
-                foreach (var node in nodes)
-                {
-                    if (node.Status == NodeStatus.Offline)
-                    {
-                        continue;
-                    }
-                    await _remoteServerNodeProxy.AppClientsDoActionAsync(node.Address, config.AppId, action);
-                }
-            }
-            return Json(new
-            {
-                success = result,
-                message = !result ? "上线配置失败，请查看错误日志" : ""
-            });
-        }
-
         public IActionResult PreViewJsonFile()
         {
             List<IFormFile> files = Request.Form.Files.ToList();
@@ -839,7 +613,6 @@ namespace AgileConfig.Server.Apisite.Controllers
                 var dict = JsonConfigurationFileParser.Parse(stream);
 
                 var addConfigs = new List<Config>();
-                //judge if json key already in configs
                 foreach (var key in dict.Keys)
                 {
                     var newKey = key;
@@ -861,14 +634,318 @@ namespace AgileConfig.Server.Apisite.Controllers
                     addConfigs.Add(config);
                 }
 
-                //var result = await _configService.AddRangeAsync(configs);
-
                 return Json(new
                 {
                     success = true,
                     data = addConfigs
                 });
             }
+        }
+
+        /// <summary>
+        /// 导出json文件
+        /// </summary>
+        /// <param name="appId">应用id</param>
+        /// <returns></returns>
+        public async Task<IActionResult> ExportJson(string appId, string env)
+        {
+            if (string.IsNullOrEmpty(appId))
+            {
+                throw new ArgumentNullException("appId");
+            }
+
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var configs = await _configService.GetByAppIdAsync(appId, env);
+
+            var dict = new Dictionary<string, string>();
+            configs.ForEach(x =>
+            {
+                var key = _configService.GenerateKey(x);
+                dict.Add(key, x.Value);
+            });
+
+            var json = DictionaryConvertToJson.ToJson(dict);
+
+            return File(Encoding.UTF8.GetBytes(json), "application/json", $"{appId}.json");
+        }
+
+        /// <summary>
+        /// 获取待发布的明细
+        /// </summary>
+        /// <param name="appId">应用id</param>
+        /// <returns></returns>
+        public async Task<IActionResult> WaitPublishStatus(string appId, string env)
+        {
+            if (string.IsNullOrEmpty(appId))
+            {
+                throw new ArgumentNullException("appId");
+            }
+
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var configs = await _configService.Search(appId, "", "", env);
+            configs = configs.Where(x => x.Status == ConfigStatus.Enabled && x.EditStatus != EditStatus.Commit)
+                .ToList();
+
+            var addCount = configs.Count(x => x.EditStatus == EditStatus.Add);
+            var editCount = configs.Count(x => x.EditStatus == EditStatus.Edit);
+            var deleteCount = configs.Count(x => x.EditStatus == EditStatus.Deleted);
+
+            return Json(new
+            {
+                success = true,
+                data = new
+                {
+                    addCount,
+                    editCount,
+                    deleteCount
+                }
+            });
+        }
+
+        /// <summary>
+        /// 获取发布详情的历史
+        /// </summary>
+        /// <param name="appId"></param>
+        /// <returns></returns>
+        public async Task<IActionResult> PublishHistory(string appId, string env)
+        {
+            if (string.IsNullOrEmpty(appId))
+            {
+                throw new ArgumentNullException("appId");
+            }
+
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var history = await _configService.GetPublishDetailListAsync(appId, env);
+
+            var result = new List<object>();
+            foreach (var publishDetails in history.GroupBy(x => x.Version).OrderByDescending(g => g.Key))
+            {
+                var data = publishDetails.ToList();
+                result.Add(new
+                {
+                    key = publishDetails.Key,
+                    timelineNode =
+                        await _configService.GetPublishTimeLineNodeAsync(data.FirstOrDefault()?.PublishTimelineId, env),
+                    list = data
+                });
+            }
+
+            return Json(new
+            {
+                success = true,
+                data = result
+            });
+        }
+
+        public async Task<IActionResult> CancelEdit(string configId, string env)
+        {
+            if (string.IsNullOrEmpty(configId))
+            {
+                throw new ArgumentNullException("configId");
+            }
+
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var result = await _configService.CancelEdit(new List<string>() { configId }, env);
+
+            if (result)
+            {
+                dynamic param = new ExpandoObject();
+                param.config = await _configService.GetAsync(configId, env);
+                param.userName = this.GetCurrentUserName();
+                param.env = env;
+                TinyEventBus.Instance.Fire(EventKeys.CANCEL_EDIT_CONFIG_SUCCESS, param);
+            }
+
+            return Json(new
+            {
+                success = true
+            });
+        }
+
+        public async Task<IActionResult> CancelSomeEdit([FromBody] List<string> ids, string env)
+        {
+            if (ids == null)
+            {
+                throw new ArgumentNullException("ids");
+            }
+
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var result = await _configService.CancelEdit(ids, env);
+
+            if (result)
+            {
+                var config = await _configService.GetAsync(ids.First(), env);
+                dynamic param = new ExpandoObject();
+                param.userName = this.GetCurrentUserName();
+                param.appId = config.AppId;
+                param.env = env;
+                TinyEventBus.Instance.Fire(EventKeys.CANCEL_EDIT_CONFIG_SOME_SUCCESS, param);
+            }
+
+            return Json(new
+            {
+                success = true
+            });
+        }
+
+        [TypeFilter(typeof(PremissionCheckAttribute),
+            Arguments = new object[] { "Config.EvnSync", Functions.Config_Add })]
+        [HttpPost]
+        public async Task<IActionResult> SyncEnv([FromBody] List<string> toEnvs, [FromQuery] string appId,
+            [FromQuery] string currentEnv)
+        {
+            if (toEnvs == null)
+            {
+                throw new ArgumentNullException("toEnvs");
+            }
+
+            if (string.IsNullOrEmpty(appId))
+            {
+                throw new ArgumentNullException("appId");
+            }
+
+            if (string.IsNullOrEmpty(currentEnv))
+            {
+                throw new ArgumentNullException("currentEnv");
+            }
+
+            var app = await _appService.GetAsync(appId);
+            if (app == null)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = $"应用（{appId}）不存在。"
+                });
+            }
+
+            var result = await _configService.EnvSync(appId, currentEnv, toEnvs);
+
+            return Json(new
+            {
+                success = result
+            });
+        }
+
+        public async Task<IActionResult> GetKvList(string appId, string env)
+        {
+            if (string.IsNullOrEmpty(appId))
+            {
+                throw new ArgumentNullException("appId");
+            }
+
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var configs = await _configService.GetByAppIdAsync(appId, env);
+            // text 格式展示的时候不需要删除的配置
+            configs = configs.Where(x => x.EditStatus != EditStatus.Deleted).ToList();
+            var kvList = new List<KeyValuePair<string, string>>();
+            foreach (var config in configs)
+            {
+                kvList.Add(new KeyValuePair<string, string>(_configService.GenerateKey(config), config.Value));
+            }
+
+            kvList = kvList.OrderBy(x => x.Key).ToList();
+            return Json(new
+            {
+                success = true,
+                data = kvList
+            });
+        }
+
+        /// <summary>
+        /// 获取json格式的配置
+        /// </summary>
+        /// <param name="appId">应用id</param>
+        /// <returns></returns>
+        public async Task<IActionResult> GetJson(string appId, string env)
+        {
+            if (string.IsNullOrEmpty(appId))
+            {
+                throw new ArgumentNullException("appId");
+            }
+
+            env = await _configService.IfEnvEmptySetDefaultAsync(env);
+
+            var configs = await _configService.GetByAppIdAsync(appId, env);
+            // json 格式展示的时候不需要删除的配置
+            configs = configs.Where(x => x.EditStatus != EditStatus.Deleted).ToList();
+            var dict = new Dictionary<string, string>();
+            configs.ForEach(x =>
+            {
+                var key = _configService.GenerateKey(x);
+                dict.Add(key, x.Value);
+            });
+
+            var json = DictionaryConvertToJson.ToJson(dict);
+
+            return Json(new
+            {
+                success = true,
+                data = json
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveJson([FromBody] SaveJsonVM data, string appId, string env)
+        {
+            if (string.IsNullOrEmpty(appId))
+            {
+                throw new ArgumentNullException(nameof(appId));
+            }
+
+            if (data == null)
+            {
+                throw new ArgumentNullException(nameof(data));
+            }
+
+            if (string.IsNullOrEmpty(data.json))
+            {
+                throw new ArgumentNullException("data.json");
+            }
+
+            var result = await _configService.SaveJsonAsync(data.json, appId, env);
+
+            return Json(new
+            {
+                success = result
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveKvList([FromBody] SaveKVListVM data, string appId, string env)
+        {
+            if (string.IsNullOrEmpty(appId))
+            {
+                throw new ArgumentNullException(nameof(appId));
+            }
+
+            if (data == null)
+            {
+                throw new ArgumentNullException(nameof(data));
+            }
+
+            var validateResult = _configService.ValidateKvString(data.str);
+            if (!validateResult.Item1)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = validateResult.Item2
+                });
+            }
+
+            var result = await _configService.SaveKvListAsync(data.str, appId, env);
+
+            return Json(new
+            {
+                success = result
+            });
         }
     }
 }

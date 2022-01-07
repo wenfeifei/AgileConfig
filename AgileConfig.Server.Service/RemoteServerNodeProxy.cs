@@ -11,7 +11,6 @@ using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AgileConfig.Server.Service
@@ -33,26 +32,35 @@ namespace AgileConfig.Server.Service
                 return JsonConvert.SerializeObject(obj);
             }
         }
-        private IServerNodeService _serverNodeService;
-        private ILogger _logger;
-        private ISysLogService _sysLogService;
-        private static ConcurrentDictionary<string, ClientInfos> _serverNodeClientReports = new ConcurrentDictionary<string, ClientInfos>();
 
-        public RemoteServerNodeProxy (ILoggerFactory loggerFactory)
+        private IServerNodeService GetServerNodeService()
         {
-            _sysLogService = new SysLogService(new FreeSqlContext(FreeSQL.Instance));
-            _serverNodeService = new ServerNodeService(new FreeSqlContext(FreeSQL.Instance));
+            return new ServerNodeService(new FreeSqlContext(FreeSQL.Instance));
+        }
+
+        private ILogger _logger;
+
+        private ISysLogService GetSysLogService()
+        {
+            return new SysLogService(new FreeSqlContext(FreeSQL.Instance));
+        }
+
+        private static ConcurrentDictionary<string, ClientInfos> _serverNodeClientReports =
+            new ConcurrentDictionary<string, ClientInfos>();
+
+        public RemoteServerNodeProxy(ILoggerFactory loggerFactory)
+        {
             _logger = loggerFactory.CreateLogger<RemoteServerNodeProxy>();
         }
 
         public async Task<bool> AllClientsDoActionAsync(string address, WebsocketAction action)
         {
-            var result = await FunctionUtil.TRY(async () =>
+            var result = await FunctionUtil.TRYAsync(async () =>
             {
                 using (var resp = await (address + "/RemoteOP/AllClientsDoAction")
-                        .AsHttp("POST", action)
-                        .Config(new RequestOptions { ContentType = "application/json" })
-                        .SendAsync())
+                    .AsHttp("POST", action)
+                    .Config(new RequestOptions { ContentType = "application/json" })
+                    .SendAsync())
                 {
                     if (resp.StatusCode == System.Net.HttpStatusCode.OK)
                     {
@@ -68,24 +76,27 @@ namespace AgileConfig.Server.Service
                 }
             }, 5);
 
-            await _sysLogService.AddSysLogAsync(new SysLog
+            using (var service = GetSysLogService())
             {
-                LogTime = DateTime.Now,
-                LogType = result ? SysLogType.Normal : SysLogType.Warn,
-                LogText = $"通知节点{address}所有客户端：{action.Action} 响应：{(result ? "成功" : "失败")}"
-            });
+                await service.AddSysLogAsync(new SysLog
+                {
+                    LogTime = DateTime.Now,
+                    LogType = result ? SysLogType.Normal : SysLogType.Warn,
+                    LogText = $"通知节点【{address}】所有客户端：【{action.Action}】 响应：{(result ? "成功" : "失败")}"
+                });
+            }
 
             return result;
         }
 
-        public async Task<bool> AppClientsDoActionAsync(string address, string appId, WebsocketAction action)
+        public async Task<bool> AppClientsDoActionAsync(string address, string appId, string env, WebsocketAction action)
         {
-            var result = await FunctionUtil.TRY(async () =>
+            var result = await FunctionUtil.TRYAsync(async () =>
             {
-                using (var resp = await (address + "/RemoteOP/AppClientsDoAction".AppendQueryString("appId", appId))
-                                       .AsHttp("POST", action)
-                                       .Config(new RequestOptions { ContentType = "application/json" })
-                                       .SendAsync())
+                using (var resp = await (address + "/RemoteOP/AppClientsDoAction".AppendQueryString("appId", appId).AppendQueryString("env", env))
+                    .AsHttp("POST", action)
+                    .Config(new RequestOptions { ContentType = "application/json" })
+                    .SendAsync())
                 {
                     if (resp.StatusCode == System.Net.HttpStatusCode.OK)
                     {
@@ -101,25 +112,28 @@ namespace AgileConfig.Server.Service
                 }
             }, 5);
 
-            await _sysLogService.AddSysLogAsync(new SysLog
+            using (var service = GetSysLogService())
             {
-                LogTime = DateTime.Now,
-                LogType = result ? SysLogType.Normal : SysLogType.Warn,
-                AppId = appId,
-                LogText = $"通知节点{address}应用{appId}的客户端：{action.Action} 响应：{(result ? "成功" : "失败")}"
-            });
+                await service.AddSysLogAsync(new SysLog
+                {
+                    LogTime = DateTime.Now,
+                    LogType = result ? SysLogType.Normal : SysLogType.Warn,
+                    AppId = appId,
+                    LogText = $"通知节点【{address}】应用【{appId}】的客户端：【{action.Action}】 响应：{(result ? "成功" : "失败")}"
+                });
+            }
 
             return result;
         }
 
         public async Task<bool> OneClientDoActionAsync(string address, string clientId, WebsocketAction action)
         {
-            var result = await FunctionUtil.TRY(async () =>
+            var result = await FunctionUtil.TRYAsync(async () =>
             {
                 using (var resp = await (address + "/RemoteOP/OneClientDoAction?clientId=" + clientId)
-                            .AsHttp("POST", action)
-                            .Config(new RequestOptions { ContentType = "application/json" })
-                            .SendAsync())
+                    .AsHttp("POST", action)
+                    .Config(new RequestOptions { ContentType = "application/json" })
+                    .SendAsync())
                 {
                     if (resp.StatusCode == System.Net.HttpStatusCode.OK)
                     {
@@ -127,7 +141,7 @@ namespace AgileConfig.Server.Service
 
                         if ((bool)result.success)
                         {
-                            if (action.Action == ActionConst.Offline || action.Action == ActionConst.Remove)
+                            if (action.Action == ActionConst.Offline)
                             {
                                 if (_serverNodeClientReports.ContainsKey(address))
                                 {
@@ -148,71 +162,82 @@ namespace AgileConfig.Server.Service
                 }
             }, 5);
 
-            await _sysLogService.AddSysLogAsync(new SysLog
+            using (var service = GetSysLogService())
             {
-                LogTime = DateTime.Now,
-                LogType = result ? SysLogType.Normal : SysLogType.Warn,
-                LogText = $"通知节点{address}的客户端{clientId}：{action.Action} 响应：{(result ? "成功" : "失败")}"
-            });
+                await service.AddSysLogAsync(new SysLog
+                {
+                    LogTime = DateTime.Now,
+                    LogType = result ? SysLogType.Normal : SysLogType.Warn,
+                    LogText = $"通知节点【{address}】的客户端【{clientId}】：【{action.Action}】 响应：{(result ? "成功" : "失败")}"
+                });
+            }
 
             return result;
         }
 
-        public ClientInfos GetClientsReport(string address)
+        public async Task<ClientInfos> GetClientsReportAsync(string address)
         {
             if (string.IsNullOrEmpty(address))
             {
-                return null;
-            }
-            _serverNodeClientReports.TryGetValue(address, out ClientInfos report);
-            if (report != null)
-            {
-                report.Infos?.ForEach(i =>
+                return new ClientInfos()
                 {
-                    i.Address = address;
-                });
+                    ClientCount = 0,
+                    Infos = new List<ClientInfo>()
+                };
             }
-            if (report == null && address == "http://localhost:5000")
+
+            try
             {
-               Console.WriteLine("report null");
+                using (var resp = await (address + "/report/Clients").AsHttp()
+               .Config(new RequestOptions(new SerializeProvider())).SendAsync())
+                {
+                    if (resp.StatusCode == System.Net.HttpStatusCode.OK)
+                    {
+                        var clients = resp.Deserialize<ClientInfos>();
+                        if (clients != null)
+                        {
+                            clients.Infos?.ForEach(i => { i.Address = address; });
+                            return clients;
+                        }
+                    }
+
+                    return new ClientInfos()
+                    {
+                        ClientCount = 0,
+                        Infos = new List<ClientInfo>()
+                    };
+                }
             }
-            return report;
+            catch (Exception ex)
+            {
+                _logger?.LogError($"Try to get client infos from node {address} occur ERROR . ", ex);
+            }
+
+            return new ClientInfos()
+            {
+                ClientCount = 0,
+                Infos = new List<ClientInfo>()
+            };
         }
 
         public async Task TestEchoAsync(string address)
         {
-            var node = await _serverNodeService.GetAsync(address);
+            using var service = GetServerNodeService();
+            var node = await service.GetAsync(address);
             try
             {
-                FunctionUtil.TRY(() =>
+                using var resp = await (node.Address + "/home/echo").AsHttp().SendAsync();
+                if (resp.StatusCode == System.Net.HttpStatusCode.OK && (await resp.GetResponseContentAsync()) == "ok")
                 {
-                    using (var resp = (node.Address + "/home/echo").AsHttp().Send())
-                    {
-                        if (resp.StatusCode == System.Net.HttpStatusCode.OK && resp.GetResponseContent() == "ok")
-                        {
-                            node.LastEchoTime = DateTime.Now;
-                            node.Status = Data.Entity.NodeStatus.Online;
-                            var report = GetClientReport(node);
-                            if (report != null)
-                            {
-                                if (_serverNodeClientReports.ContainsKey(node.Address))
-                                {
-                                    _serverNodeClientReports[node.Address] = report;
-                                }
-                                else
-                                {
-                                    _serverNodeClientReports.AddOrUpdate(node.Address, report, (k, r) => report);
-                                }
-                                
-                            }
-                        }
-                        else
-                        {
-                            node.Status = Data.Entity.NodeStatus.Offline;
-                        }
-                        _serverNodeService.UpdateAsync(node);
-                    }
-                }, 5);
+                    node.LastEchoTime = DateTime.Now;
+                    node.Status = Data.Entity.NodeStatus.Online;
+                }
+                else
+                {
+                    node.Status = Data.Entity.NodeStatus.Offline;
+                }
+
+                await service.UpdateAsync(node);
             }
             catch (Exception e)
             {
@@ -226,69 +251,29 @@ namespace AgileConfig.Server.Service
             {
                 while (true)
                 {
-                    var nodes = await _serverNodeService.GetAllNodesAsync();
-                    nodes.ForEach(n =>
+                    using var service = GetServerNodeService();
+                    var nodes = await service.GetAllNodesAsync();
+
+                    foreach (var node in nodes)
                     {
-                        try
-                        {
-                            FunctionUtil.TRY(() =>
-                            {
-                                using (var resp = (n.Address + "/home/echo").AsHttp().Send())
-                                {
-                                    if (resp.StatusCode == System.Net.HttpStatusCode.OK && resp.GetResponseContent() == "ok")
-                                    {
-                                        n.LastEchoTime = DateTime.Now;
-                                        n.Status = Data.Entity.NodeStatus.Online;
-                                        var report = GetClientReport(n);
-                                        if (_serverNodeClientReports.ContainsKey(n.Address))
-                                        {
-                                            _serverNodeClientReports[n.Address] = report;
-                                        }
-                                        else
-                                        {
-                                            _serverNodeClientReports.AddOrUpdate(n.Address, report, (k, r) => report);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        n.Status = Data.Entity.NodeStatus.Offline;
-                                    }
-                                    _serverNodeService.UpdateAsync(n);
-                                }
-                            }, 5);
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogInformation(e, "Try test node {0} echo , but fail .", n.Address);
-                        }
-                    });
+                        await TestEchoAsync(node.Address);
+                    }
 
                     await Task.Delay(5000 * 1);
                 }
             });
         }
 
-        private ClientInfos GetClientReport(ServerNode node)
+        public async Task ClearCache(string address)
         {
-            return FunctionUtil.TRY(() =>
+            try
+            { 
+                await (address + "/RemoteOP/ClearCache").AsHttp("POST").SendAsync();
+            }
+            catch (Exception e)
             {
-                using (var resp = (node.Address + "/report/Clients").AsHttp().Config(new RequestOptions(new SerializeProvider())).Send())
-                {
-                    if (resp.StatusCode == System.Net.HttpStatusCode.OK)
-                    {
-                        var content = resp.GetResponseContent();
-                        _logger.LogTrace($"ServerNode: {node.Address} report clients infomation , {content}");
-
-                        var report = resp.Deserialize<ClientInfos>();
-                        if (report != null)
-                        {
-                            return report;
-                        }
-                    }
-
-                    return null;
-                }
-            }, 5);
+                _logger.LogError(e, "Try to clear node {0}'s cache , but fail .", address);
+            }
         }
     }
 }

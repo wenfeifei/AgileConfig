@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AgileConfig.Server.Common;
-using Microsoft.EntityFrameworkCore;
 using AgileConfig.Server.Data.Freesql;
 
 namespace AgileConfig.Server.Service
@@ -13,8 +12,11 @@ namespace AgileConfig.Server.Service
     {
         private FreeSqlContext _dbContext;
 
-        public string AdminPasswordSettingKey => "AdminPassword";
-        public string AdminPasswordHashSaltKey => "AdminPasswordHashSalt";
+        public const string SuperAdminId = "super_admin";
+        public const string SuperAdminUserName = "admin";
+
+        public const string DefaultEnvironment = "DEV,TEST,STAGING,PROD";
+        public const string DefaultEnvironmentKey = "environment";
 
         public SettingService(FreeSqlContext context)
         {
@@ -41,7 +43,7 @@ namespace AgileConfig.Server.Service
 
         public async Task<bool> DeleteAsync(string settingId)
         {
-             var setting = await _dbContext.Settings.Where(s => s.Id == settingId).ToOneAsync();
+            var setting = await _dbContext.Settings.Where(s => s.Id == settingId).ToOneAsync();
             if (setting != null)
             {
                 _dbContext.Settings.Remove(setting);
@@ -68,7 +70,7 @@ namespace AgileConfig.Server.Service
             return x > 0;
         }
 
-        public async Task<bool> SetAdminPassword(string password)
+        public async Task<bool> SetSuperAdminPassword(string password)
         {
             if (string.IsNullOrEmpty(password))
             {
@@ -78,34 +80,72 @@ namespace AgileConfig.Server.Service
             var newSalt = Guid.NewGuid().ToString("N");
             password = Encrypt.Md5((password + newSalt));
 
-            await DeleteAsync(AdminPasswordHashSaltKey);
-            await DeleteAsync(AdminPasswordSettingKey);
+            var su = new User();
+            su.Id = SuperAdminId;
+            su.Password = password;
+            su.Salt = newSalt;
+            su.Status = UserStatus.Normal;
+            su.Team = "";
+            su.CreateTime = DateTime.Now;
+            su.UserName = SuperAdminUserName;
+            _dbContext.Users.Add(su);
 
-            await AddAsync(new Setting { Id = AdminPasswordHashSaltKey, Value = newSalt, CreateTime = DateTime.Now });
-            await AddAsync(new Setting { Id = AdminPasswordSettingKey, Value = password, CreateTime = DateTime.Now });
+            var ursa = new UserRole()
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Role = Role.SuperAdmin,
+                UserId = SuperAdminId
+            };
+            _dbContext.UserRoles.Add(ursa);
+            var ura = new UserRole()
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Role = Role.Admin,
+                UserId = SuperAdminId
+            };
+            _dbContext.UserRoles.Add(ura);
+
+            var result = await _dbContext.SaveChangesAsync();
+
+            return result > 0;
+        }
+
+        public async Task<bool> HasSuperAdmin()
+        {
+            var admin = await _dbContext.Users.Where(x => x.Id == SuperAdminId).FirstAsync();
+
+            return admin != null;
+        }
+
+        public async Task<bool> InitDefaultEnvironment()
+        {
+            var env = await _dbContext.Settings.Where(x => x.Id == DefaultEnvironmentKey).FirstAsync();
+            if (env == null)
+            {
+                _dbContext.Settings.Add(new Setting
+                {
+                    Id = DefaultEnvironmentKey,
+                    Value = DefaultEnvironment,
+                    CreateTime = DateTime.Now
+                });
+                var result = await _dbContext.SaveChangesAsync();
+
+                return result > 0;
+            }
 
             return true;
         }
 
-        public async Task<bool> HasAdminPassword()
+        public void Dispose()
         {
-            var password = await GetAsync(AdminPasswordSettingKey);
-
-            return password != null;
+            _dbContext.Dispose();
         }
 
-        public async Task<bool> ValidateAdminPassword(string password)
+        public async Task<string[]> GetEnvironmentList()
         {
-            var dbPassword = await GetAsync(AdminPasswordSettingKey);
-            if (dbPassword == null || string.IsNullOrEmpty(dbPassword.Value) || string.IsNullOrEmpty(password))
-            {
-                return false;
-            }
+            var env = await _dbContext.Settings.Where(x => x.Id == DefaultEnvironmentKey).FirstAsync();
 
-            var salt = await GetAsync(AdminPasswordHashSaltKey);
-            password = Encrypt.Md5((password + salt.Value));
-
-            return password == dbPassword.Value;
+            return env.Value.ToUpper().Split(',');
         }
     }
 }

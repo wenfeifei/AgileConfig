@@ -1,8 +1,12 @@
 import { useIntl } from "@/.umi/plugin-locale/localeExports";
 import {  ModalForm, ProFormDependency, ProFormSelect, ProFormSwitch, ProFormText } from "@ant-design/pro-form";
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppListItem } from "../data";
-import { inheritancedApps } from "../service";
+import { getAppGroups, inheritancedApps } from "../service";
+import { adminUsers } from '@/pages/User/service';
+import { Divider, Input } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+
 export type UpdateFormProps = {
     onSubmit: (values: AppListItem) => Promise<void>;
     onCancel: () => void;
@@ -12,7 +16,22 @@ export type UpdateFormProps = {
   };
 const UpdateForm : React.FC<UpdateFormProps> = (props)=>{
     const intl = useIntl();
-
+    const [appGroups, setAppGroups] = useState<{label:string, value:string}[]>([]);
+    const [newAppGroupName, setNewAppGroupName] = useState<string>('');
+    useEffect(()=>{
+      getAppGroups().then(x=>{
+        if (x.success) {
+          const groups:{label:string, value:string}[] = [];
+          x.data.forEach((i: any)=>{
+            groups.push({
+              label:i,
+              value: i
+            });
+          })
+          setAppGroups(groups);
+        } 
+      })
+    },[]);
     return (
     <ModalForm 
     title={
@@ -69,6 +88,37 @@ const UpdateForm : React.FC<UpdateFormProps> = (props)=>{
       }
       name="secret"
     />
+          <ProFormSelect
+                placeholder="应用所属的组"
+                  label="应用组"
+                  name="group"
+                  options={appGroups}
+                  fieldProps={{
+                    dropdownRender: (menu) => (
+                      <div>
+                      {menu}
+                      <Divider style={{ margin: '4px 0' }} />
+                        <div style={{ display: 'flex', flexWrap: 'nowrap', padding: 8 }}>
+                          <Input placeholder="输入组名" style={{ flex: 'auto' }} value={newAppGroupName} onChange={(e)=>{ setNewAppGroupName(e.target.value) }} />
+                          <a
+                            style={{ flex: 'none', padding: '8px', display: 'block', cursor: 'pointer' }}
+                            onClick={()=>{
+                              if(newAppGroupName){
+                                setAppGroups([...appGroups, {
+                                  label: newAppGroupName,
+                                  value: newAppGroupName
+                                }]);
+                                setNewAppGroupName('');
+                              }
+                            }}
+                          >
+                            <PlusOutlined /> 
+                          </a>
+                        </div>
+                      </div>
+                    )
+                  }}
+        ></ProFormSelect>
     <ProFormSwitch 
       tooltip="公共应用可以被其他应用关联"
       label={
@@ -103,7 +153,22 @@ const UpdateForm : React.FC<UpdateFormProps> = (props)=>{
         }
       }
     </ProFormDependency>
-   
+    <ProFormSelect
+              rules={[
+                {
+                  required: true,
+                },
+              ]}
+                  label="管理员"
+                  name="appAdmin"
+                  request={async () => {
+                    const result = await adminUsers();
+                    return result.data.map( (x: { userName: string, id: string, team:string })=> {
+                      console.log(x);
+                      return { label:x.userName + ' - ' + (x.team?x.team:''), value:x.id};
+                    });
+                  }}
+        ></ProFormSelect>
     <ProFormSwitch label={
       intl.formatMessage({
         id: 'pages.app.form.enabled'

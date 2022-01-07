@@ -3,7 +3,6 @@ using AgileConfig.Server.IService;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using AgileConfig.Server.Data.Freesql;
 using System.Linq;
 
@@ -22,7 +21,7 @@ namespace AgileConfig.Server.Service
         {
             await _dbContext.Apps.AddAsync(app);
             int x = await _dbContext.SaveChangesAsync();
-            var result =  x > 0;
+            var result = x > 0;
 
             return result;
         }
@@ -44,6 +43,13 @@ namespace AgileConfig.Server.Service
             if (app != null)
             {
                 _dbContext.Apps.Remove(app);
+                //怕有的同学误删app导致要恢复，所以保留配置项吧。
+                var configs = await _dbContext.Configs.Where(x => x.AppId == app.Id).ToListAsync();
+                foreach (var item in configs)
+                {
+                    item.Status = ConfigStatus.Deleted;
+                    await _dbContext.UpdateAsync(item);
+                }
             }
             int x = await _dbContext.SaveChangesAsync();
             var result = x > 0;
@@ -71,7 +77,7 @@ namespace AgileConfig.Server.Service
 
         public async Task<List<App>> GetAllAppsAsync()
         {
-            return await  _dbContext.Apps.Where(a=> 1==1).ToListAsync();
+            return await _dbContext.Apps.Where(a => 1 == 1).ToListAsync();
         }
 
         public async Task<bool> UpdateAsync(App app)
@@ -111,7 +117,7 @@ namespace AgileConfig.Server.Service
             foreach (var item in appInheritanceds)
             {
                 var app = await GetAsync(item.InheritancedAppId);
-                if (app!=null && app.Enabled)
+                if (app != null && app.Enabled)
                 {
                     apps.Add(app);
                 }
@@ -119,6 +125,31 @@ namespace AgileConfig.Server.Service
 
             return apps;
         }
+
+        /// <summary>
+        /// 查询所有继承自该app的应用
+        /// </summary>
+        /// <param name="appId"></param>
+        /// <returns></returns>
+        public async Task<List<App>> GetInheritancedFromAppsAsync(string appId)
+        {
+            var appInheritanceds = await _dbContext.AppInheritanceds.Where(a => a.InheritancedAppId == appId).ToListAsync();
+            appInheritanceds = appInheritanceds.OrderBy(a => a.Sort).ToList();
+
+            var apps = new List<App>();
+
+            foreach (var item in appInheritanceds)
+            {
+                var app = await GetAsync(item.AppId);
+                if (app != null && app.Enabled)
+                {
+                    apps.Add(app);
+                }
+            }
+
+            return apps;
+        }
+
 
         public async Task<bool> UpdateAsync(App app, List<AppInheritanced> appInheritanceds)
         {
@@ -134,6 +165,60 @@ namespace AgileConfig.Server.Service
             var result = x > 0;
 
             return result;
+        }
+
+        public async Task<bool> SaveUserAppAuth(string appId, List<string> userIds, string permission)
+        {
+            var userAppAuthList = new List<UserAppAuth>();
+            if (userIds == null)
+            {
+                userIds = new List<string>();
+            }
+            foreach (var userId in userIds)
+            {
+                userAppAuthList.Add(new UserAppAuth
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    AppId = appId,
+                    UserId = userId,
+                    Permission = permission
+                });
+            }
+            await _dbContext.UserAppAuths.RemoveAsync(x => x.AppId == appId && x.Permission == permission);
+            await _dbContext.UserAppAuths.AddRangeAsync(userAppAuthList);
+
+            await _dbContext.SaveChangesAsync();
+
+            return true;
+        }
+
+        public void Dispose()
+        {
+            _dbContext.Dispose();
+        }
+
+        public async Task<List<User>> GetUserAppAuth(string appId, string permission)
+        {
+            var auths = await _dbContext.UserAppAuths.Where(x => x.AppId == appId && x.Permission == permission).ToListAsync();
+
+            var users = new List<User>();
+            foreach (var auth in auths)
+            {
+                var user = await _dbContext.Users.Where(u => u.Id == auth.UserId).FirstAsync();
+                if (user != null)
+                {
+                    users.Add(user);
+                }
+            }
+
+            return users;
+        }
+
+        public List<string> GetAppGroups()
+        {
+            var groups = _dbContext.Apps.Select.GroupBy(x => x.Group).Select(x => x.Key)
+                ;
+            return groups.Where(x => !string.IsNullOrEmpty(x)).ToList();
         }
     }
 }

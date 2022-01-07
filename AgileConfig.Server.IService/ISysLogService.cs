@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace AgileConfig.Server.IService
 {
-    public interface ISysLogService
+    public interface ISysLogService: IDisposable
     {
         Task<bool> AddSysLogAsync(SysLog log);
 
-        Task<bool> AddRangeAsync(List<SysLog> logs);
+        Task<bool> AddRangeAsync(IEnumerable<SysLog> logs);
 
 
         Task<List<SysLog>> SearchPage(string appId, SysLogType? logType,DateTime? startTime, DateTime? endTime, int pageSize, int pageIndex);

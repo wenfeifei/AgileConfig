@@ -7,39 +7,51 @@
 
 
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/kklldog/agileconfig/.NET%20Core)
+[![Member project of .NET Core Community](https://img.shields.io/badge/member%20project%20of-NCC-9e20c9.svg)](https://github.com/dotnetcore)
+[![package workflow](https://github.com/dotnetcore/AgileConfig/actions/workflows/release-xxx.yml/badge.svg)](https://github.com/dotnetcore/AgileConfig/actions/workflows/release-xxx.yml)
 ![GitHub stars](https://img.shields.io/github/stars/kklldog/AgileConfig)
 ![Commit Date](https://img.shields.io/github/last-commit/kklldog/AgileConfig/master.svg?logo=github&logoColor=green&label=commit)
 ![Nuget](https://img.shields.io/nuget/v/agileconfig.client?label=agileconfig.client)
 ![Nuget](https://img.shields.io/nuget/dt/agileconfig.client?label=client%20download)
 ![Docker image](https://img.shields.io/docker/v/kklldog/agile_config?label=docker%20image)
 ![GitHub license](https://img.shields.io/github/license/kklldog/AgileConfig)
-
+    
+# [English](https://github.com/kklldog/AgileConfig/blob/master/README_EN.md) | [中文](https://github.com/kklldog/AgileConfig/blob/master/README.md)
     
 这是一个基于.net core开发的轻量级配置中心。说起配置中心很容易让人跟微服务联系起来，如果你选择微服务架构，那么几乎逃不了需要一个配置中心。事实上我这里并不是要蹭微服务的热度。这个世界上有很多分布式程序但它并不是微服务。比如有很多传统的SOA的应用他们分布式部署，但并不是完整的微服务架构。这些程序由于分散在多个服务器上所以更改配置很困难。又或者某些程序即使不是分布式部署的，但是他们采用了容器化部署，他们修改配置同样很费劲。所以我开发AgileConfig并不是为了什么微服务，我更多的是为了那些分布式、容器化部署的应用能够更加简单的读取、修改配置。    
 AgileConfig秉承轻量化的特点，部署简单、配置简单、使用简单、学习简单，它只提取了必要的一些功能，并没有像Apollo那样复杂且庞大。但是它的功能也已经足够你替换webconfig，appsettings.json这些文件了。如果你不想用微服务全家桶，不想为了部署一个配置中心而需要看N篇教程跟几台服务器那么你可以试试AgileConfig  ：）   
+Gitee 镜像：[https://gitee.com/kklldog/AgileConfig](https://gitee.com/kklldog/AgileConfig)    
 ## 特点
 1. 部署简单，最少只需要一个数据节点，支持docker部署
 2. 支持多节点分布式部署来保证高可用
 3. 配置支持按应用隔离，应用内配置支持分组隔离
-4. 应用支持继承，可以把公共配置提取到一个应用然后其它应用继承它
-5. 使用长连接技术，配置信息实时推送至客户端
-6. 支持IConfiguration，IOptions模式读取配置，原程序几乎可以不用改造
-7. 配置修改支持版本记录，随时回滚配置
-8. 如果所有节点都故障，客户端支持从本地缓存读取配置
-9. 支持Restful API维护配置
+4. 支持多环境
+5. 应用支持继承，可以把公共配置提取到一个应用然后其它应用继承它
+6. 使用长连接技术，配置信息实时推送至客户端
+7. 支持IConfiguration，IOptions模式读取配置，原程序几乎可以不用改造
+8. 配置修改支持版本记录，随时回滚配置
+9. 如果所有节点都故障，客户端支持从本地缓存读取配置
+10. 支持Restful API维护配置
     
-演示地址：[AgileConfig Server Demo](http://agileconfig.xbaby.xyz:5000)   密码：123456   
+演示地址：[AgileConfig Server Demo](http://agileconfig_server.xbaby.xyz)   用户名：admin 密码：123456   
 客户端项目：[AgileConfig_Client](https://github.com/kklldog/AgileConfig_Client)   
 示例项目：    
 [AgileConfigMVCSample](https://github.com/kklldog/AgileConfig_Client/tree/master/AgileConfigMVCSample)   
 [AgileConfig WPFSample](https://github.com/kklldog/AgileConfig_Client/tree/master/AgileConfigWPFSample)    
 [AgileConfig ConsoleSample](https://github.com/kklldog/AgileConfig_Client/tree/master/AgileConfigConsoleSample)    
 [教程 - 如何使用AgileConfig.Client读取配置](https://www.cnblogs.com/kklldog/p/how-to-use-agileconfigclient.html)    
+👉🏻👉🏻[常见问题，必看！！！](https://github.com/kklldog/AgileConfig/wiki/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%EF%BC%8C%E5%BF%85%E7%9C%8B%EF%BC%81%EF%BC%81%EF%BC%81)👈🏻👈🏻   
+[关于多环境的部署说明](https://github.com/dotnetcore/AgileConfig/wiki/%E5%85%B3%E4%BA%8E-1.5-%E7%89%88%E6%9C%AC%E6%94%AF%E6%8C%81%E5%A4%9A%E7%8E%AF%E5%A2%83%E7%9A%84%E8%AF%B4%E6%98%8E)   
+   
+其它教程：    
+[博客园-.Net Core&Agile Config配置中心](https://www.cnblogs.com/CKExp/p/15738149.html)
+   
 API:   
 [restful api](https://github.com/kklldog/AgileConfig/wiki/Restful-API)
 ## ChangeLog
-[Changelog](https://github.com/kklldog/AgileConfig/blob/master/CHANGELOG.md)
+[Changelog](https://github.com/kklldog/AgileConfig/blob/master/CHANGELOG.md)   
+## 联系作者
+[联系](#联系我)
 ## 架构
 ![](https://s1.ax1x.com/2020/06/29/NRz1gO.png)
 AgileConfig的架构比较简单，主要是分3块：
@@ -70,17 +82,76 @@ npgsql = PostgreSql
 oracle = Oracle   
 ## 使用服务端
 ### 运行服务端
-```
-sudo docker run --name agile_config -e adminConsole=true -e db:provider=sqlite -e db:conn="Data Source=agile_config.db" -p 5000:5000 -v /etc/localtime:/etc/localtime  kklldog/agile_config:latest
+使用 docker 运行
+``` shell
+sudo docker run \
+--name agile_config \
+-e TZ=Asia/Shanghai \
+-e adminConsole=true \
+-e db:provider=sqlite \
+-e db:conn="Data Source=agile_config.db" \
+-p 5000:5000 \
+#-v /your_host_dir:/app/db \
+-d kklldog/agile_config:latest
 ```
 通过docker建立一个agile_config实例，其中有3个环境变量需要配置:    
 1. adminConsole 配置程序是否为管理控制台。如果为true则启用控制台功能，访问该实例会出现管理界面。
 2. db:provider 配置程序的数据库类型。目前程序支持：sqlserver，mysql，sqlite, PostgreSql，Oracle 五种数据库。
 3. db:conn 配置数据库连接串    
-    
-![](https://ftp.bmp.ovh/imgs/2021/04/88c43b8bbddb2c4e.png)
+   
+> 注意：如果通过IIS或者别的方式部署，请自行从主页上的[releases](https://github.com/dotnetcore/AgileConfig/releases)页面下载最新的部署包。如果自己使用源码编译，请先编译react-ui-antd项目把dist内的产物复制到apisite项目的wwwroot/ui目录下。
+
+使用 docker-compose 运行
+```
+version: '3'
+services:
+  agile_config_admin:
+    image: "kklldog/agile_config"
+    ports:
+      - "15000:5000"
+    networks:
+      - net0
+    volumes:
+      - /etc/localtime:/etc/localtime
+    environment:
+      - TZ=Asia/Shanghai
+      - adminConsole=true
+      - nodes=agile_config_admin:5000,agile_config_node1:5000,agile_config_node2:5000
+      - db:provider=mysql
+      - db:conn= database=configcenter;data source=192.168.0.115;User Id=root;password=mdsd;port=3306
+  agile_config_node1:
+    image: "kklldog/agile_config"
+    ports:
+      - "15001:5000"
+    networks:
+      - net0
+    volumes:
+      - /etc/localtime:/etc/localtime
+    environment:
+      - TZ=Asia/Shanghai
+      - db:provider=mysql
+      - db:conn= database=configcenter;data source=192.168.0.115;User Id=root;password=mdsd;port=3306
+    depends_on:
+      - agile_config_admin
+  agile_config_node2:
+    image: "kklldog/agile_config"
+    ports:
+      - "15002:5000"
+    networks:
+      - net0
+    volumes:
+      - /etc/localtime:/etc/localtime
+    environment:
+      - TZ=Asia/Shanghai
+      - db:provider=mysql
+      - db:conn= database=configcenter;data source=192.168.0.115;User Id=root;password=mdsd;port=3306
+    depends_on:
+      - agile_config_admin
+networks:
+  net0:
+```
 ### 初始化管理员密码
-第一次运行程序需要初始化管理员密码    
+第一次运行程序需要初始化超级管理员密码，超管用户名固定为 admin    
 ![](https://ftp.bmp.ovh/imgs/2021/04/44242b327230c5e6.png)
 ### 节点
 AgileConfig支持多节点部署，所有的节点都是平行的。为了简化部署，AgileConfig并没有单独的控制台程序，请直接使用任意一个节点作为控制台。当环境变量adminConsole=true时，该节点同时兼备数据节点跟控制台功能。为了控制台能够管理节点，所以需要在控制台配置节点的信息。
@@ -114,7 +185,7 @@ Install-Package AgileConfig.Client
 ```
 ### 初始化客户端
 以asp.net core mvc项目为例：
-```
+``` json
 {
   "Logging": {
     "LogLevel": {
@@ -129,99 +200,163 @@ Install-Package AgileConfig.Client
   "AgileConfig": {
     "appId": "app",
     "secret": "xxx",
-    "nodes": "http://localhost:5000,http://localhost:5001"//多个节点使用逗号分隔
+    "nodes": "http://localhost:5000,http://localhost:5001"//多个节点使用逗号分隔,
+    "name": "client_name",
+    "tag": "tag1",
+    "env": "DEV"
   }
 }
 
 ```
-```
-       public static IHostBuilder CreateHostBuilder(string[] args) =>
+在appsettings.json文件配置agileconfig的配置信息。
+``` c#
+public static IHostBuilder CreateHostBuilder(string[] args) =>
+    Host.CreateDefaultBuilder(args)
+        .ConfigureAppConfiguration((context, config) =>
+        {
+            //default appsettings.json
+            config.AddAgileConfig(arg => Console.WriteLine($"config changed , action:{arg.Action} key:{arg.Key}"));
+        })
+        .ConfigureWebHostDefaults(webBuilder =>
+        {
+            webBuilder.UseStartup<Startup>();
+        });
+  ------or UseAgileConfig -------
+     public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration((context, config) =>
-            {
-                //new一个client实例，无参构造会从本地appsettings.json文件读取配置
-                var configClient = new ConfigClient();
-                //使用AddAgileConfig配置一个新的IConfigurationSource
-                config.AddAgileConfig(configClient);
-                //找一个变量挂载client实例，以便其他地方可以直接使用实例访问配置
-                ConfigClient = configClient;
-                //注册配置项修改事件
-                configClient.ConfigChanged += ConfigClient_ConfigChanged;
-            })
+                .UseAgileConfig(e => Console.WriteLine($"configs {e.Action}"))
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
                 });
 ```
+根据环境变量读取appsettings.{env}.json配置信息。
+``` c#
+public static IHostBuilder CreateHostBuilder(string[] args) =>
+    Host.CreateDefaultBuilder(args)
+        .ConfigureAppConfiguration((context, config) =>
+        {
+            var envName = context.HostingEnvironment.EnvironmentName;
+            var configClient = new ConfigClient($"appsettings.{envName}.json");
+            config.AddAgileConfig(configClient, arg => Console.WriteLine($"config changed , action:{arg.Action} key:{arg.Key}"));
+        })
+        .ConfigureWebHostDefaults(webBuilder =>
+        {
+            webBuilder.UseStartup<Startup>();
+        });
+```
+
+> 注意：☢️☢️☢️如果你的程序是Framework的程序请使用[AgileConfig.Client4FR](https://github.com/kklldog/AgileConfig.Client4FR)这个专门为Framework打造的client。使用当前版本有可能死锁造成cpu100% 的风险。
+
 > 注意：如果节点使用nginx反代的话，需要对nginx进行配置，使其支持websocket协议，不然客户端跟节点的长连接没法建立。
 
 ## 读取配置
-AgileConfig支持asp.net core 标准的IConfiguration，跟IOptions模式读取配置。还支持直接通过AgileConfigClient实例直接读取：
-```
+AgileConfig支持asp.net core 标准的IConfiguration，跟IOptions模式读取配置。
+``` c#
 public class HomeController : Controller
+{
+    private readonly ILogger<HomeController> _logger;
+    private readonly IConfiguration _IConfiguration;
+    private readonly IOptions<DbConfigOptions> _dbOptions;
+
+    public HomeController(ILogger<HomeController> logger, IConfiguration configuration, IOptions<DbConfigOptions> dbOptions)
     {
-        private readonly ILogger<HomeController> _logger;
-        private readonly IConfiguration _IConfiguration;
-        private readonly IOptions<DbConfigOptions> _dbOptions;
-
-        public HomeController(ILogger<HomeController> logger, IConfiguration configuration, IOptions<DbConfigOptions> dbOptions)
-        {
-            _logger = logger;
-            _IConfiguration = configuration;
-            _dbOptions = dbOptions;
-        }
-
-        public IActionResult Index()
-        {
-            return View();
-        }
-
-        /// <summary>
-        /// 使用IConfiguration读取配置
-        /// </summary>
-        /// <returns></returns>
-        public IActionResult ByIConfiguration()
-        {
-            var userId = _IConfiguration["userId"];
-            var dbConn = _IConfiguration["db:connection"];
-
-            ViewBag.userId = userId;
-            ViewBag.dbConn = dbConn;
-
-            return View();
-        }
-
-        /// <summary>
-        /// 直接使用ConfigClient的实例读取配置
-        /// </summary>
-        /// <returns></returns>
-        public IActionResult ByInstance()
-        {
-            var userId = Program.ConfigClient["userId"];
-            var dbConn = Program.ConfigClient["db:connection"];
-
-            ViewBag.userId = userId;
-            ViewBag.dbConn = dbConn;
-
-            return View("ByInstance");
-        }
-
-        /// <summary>
-        /// 使用Options模式读取配置
-        /// </summary>
-        /// <returns></returns>
-        public IActionResult ByOptions()
-        {
-            var dbConn = _dbOptions.Value.connection;
-            ViewBag.dbConn = dbConn;
-
-            return View("ByOptions");
-        }
+        _logger = logger;
+        _IConfiguration = configuration;
+        _dbOptions = dbOptions;
     }
+
+    public IActionResult Index()
+    {
+        return View();
+    }
+
+    /// <summary>
+    /// 使用IConfiguration读取配置
+    /// </summary>
+    /// <returns></returns>
+    public IActionResult ByIConfiguration()
+    {
+        var userId = _IConfiguration["userId"];
+        var dbConn = _IConfiguration["db:connection"];
+
+        ViewBag.userId = userId;
+        ViewBag.dbConn = dbConn;
+
+        return View();
+    }
+
+    /// <summary>
+    /// 使用Options模式读取配置
+    /// </summary>
+    /// <returns></returns>
+    public IActionResult ByOptions()
+    {
+        var dbConn = _dbOptions.Value.connection;
+        ViewBag.dbConn = dbConn;
+
+        return View("ByOptions");
+    }
+}
 ```
+
+在Startup内使用AddAgileConfig配置注入，然后其他地方就可以通过IConfigClient来获取这个实例。
+``` c#
+public class Startup
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAgileConfig();
+    }
+}
+```
+
+``` c#
+public class HomeController : Controller
+{
+    private readonly IConfigClient _configClient
+
+    public HomeController(IConfigClient configClient)
+    {
+        _configClient = configClient;
+    }
+
+    public IActionResult Index()
+    {
+        return View();
+    }
+
+    /// <summary>
+    /// 使用IConfigClient读取配置
+    /// </summary>
+    /// <returns></returns>
+    public IActionResult ByIConfigClient()
+    {
+        var userId = _configClient["userId"];
+        var dbConn = _configClient["db:connection"];
+
+        foreach (var item in _configClient.Data)
+        {
+            Console.WriteLine($"{item.Key} = {item.Value}");
+        }
+
+        ViewBag.userId = userId;
+        ViewBag.dbConn = dbConn;
+
+        return View();
+    }
+}
+```
+
 ## 联系我
 有什么问题可以mail我：minj.zhou@gmail.com   
 也可以加qq群：1022985150
 ## 如果觉得这个项目对你有帮助可以给作者早餐加个蛋🍳🍳🍳
-<img src = 'https://ftp.bmp.ovh/imgs/2021/04/c0146fa995e8074d.jpg'  width="300"/>
-<img src = 'https://ftp.bmp.ovh/imgs/2021/04/1c8748c5732b8fbe.jpg' width="300"/>
+ <img src="https://static.xbaby.xyz/alipay_qr.jpg|w30" width="300">
+     
+ <img src="https://static.xbaby.xyz/wechatpay_qr.jpg|w30" width="300">
+
+
+        
+### 感谢💖💖💖
+大鹏￥66.66 , 瘦草￥6.66 + 88 , ziana￥10.0 , Nullable￥9.99 , *三 ￥6.66 , HHM ￥6.66

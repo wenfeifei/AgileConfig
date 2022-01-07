@@ -7,6 +7,9 @@ using AgileConfig.Server.IService;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
+using AgileConfig.Server.Common;
+using System.Dynamic;
+using AgileConfig.Server.Apisite.Utilites;
 
 namespace AgileConfig.Server.Apisite.Controllers
 {
@@ -27,6 +30,7 @@ namespace AgileConfig.Server.Apisite.Controllers
             _remoteServerNodeProxy = remoteServerNodeProxy;
         }
 
+        [TypeFilter(typeof(PremissionCheckAttribute), Arguments = new object[] { "Node.Add", Functions.Node_Add })]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody]ServerNodeVM model)
         {
@@ -54,12 +58,10 @@ namespace AgileConfig.Server.Apisite.Controllers
             var result = await _serverNodeService.AddAsync(node);
             if (result)
             {
-                await _sysLogService.AddSysLogAsync(new SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = SysLogType.Normal,
-                    LogText = $"新增节点：{node.Address}"
-                });
+                dynamic param = new ExpandoObject();
+                param.node = node;
+                param.userName = this.GetCurrentUserName();
+                TinyEventBus.Instance.Fire(EventKeys.ADD_NODE_SUCCESS, param);
                 await _remoteServerNodeProxy.TestEchoAsync(node.Address);
             }
            
@@ -71,7 +73,7 @@ namespace AgileConfig.Server.Apisite.Controllers
             });
         }
 
-
+        [TypeFilter(typeof(PremissionCheckAttribute), Arguments = new object[] { "Node.Delete", Functions.Node_Delete })]
         [HttpPost]
         public async Task<IActionResult> Delete([FromBody]ServerNodeVM model)
         {
@@ -101,12 +103,10 @@ namespace AgileConfig.Server.Apisite.Controllers
             var result = await _serverNodeService.DeleteAsync(node);
             if (result)
             {
-                await _sysLogService.AddSysLogAsync(new SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = SysLogType.Normal,
-                    LogText = $"删除节点：{node.Address}"
-                });
+                dynamic param = new ExpandoObject();
+                param.node = node;
+                param.userName = this.GetCurrentUserName();
+                TinyEventBus.Instance.Fire(EventKeys.DELETE_NODE_SUCCESS, param);
             }
             return Json(new
             {

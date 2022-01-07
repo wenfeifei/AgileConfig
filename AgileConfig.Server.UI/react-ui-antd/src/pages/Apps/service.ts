@@ -1,5 +1,5 @@
 import request from '@/utils/request';
-import { AppListItem, AppListParams, AppListResult } from './data';
+import { AppListItem, AppListParams, AppListResult, UserAppAuth } from './data';
 
 export async function queryApps(params:AppListParams) {
   return request<AppListResult>('/app/search', {
@@ -46,5 +46,27 @@ export async function enableOrdisableApp(appId:string) {
     params: {
       id: appId
     }
+  });
+}
+
+export async function saveAppAuth(model:UserAppAuth) {
+  return request('/app/saveAppAuth', {
+    method: 'POST',
+    data: model
+  });
+}
+
+export async function getUserAppAuth(appId:string) {
+  return request('/app/GetUserAppAuth', {
+    method: 'GET',
+    params: {
+      appId: appId
+    }
+  });
+}
+
+export async function getAppGroups() {
+  return request('/app/GetAppGroups', {
+    method: 'GET',
   });
 }

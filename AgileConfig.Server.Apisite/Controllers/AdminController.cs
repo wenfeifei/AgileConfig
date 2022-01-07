@@ -1,27 +1,39 @@
 ﻿using System;
 using System.Threading.Tasks;
 using AgileConfig.Server.Apisite.Models;
+using AgileConfig.Server.Common;
+using AgileConfig.Server.Data.Entity;
 using AgileConfig.Server.IService;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Dynamic;
+using AgileConfig.Server.Apisite.Utilites;
 
 namespace AgileConfig.Server.Apisite.Controllers
 {
     public class AdminController : Controller
     {
         private readonly ISettingService _settingService;
-        private readonly ISysLogService _sysLogService;
-        public AdminController(ISettingService settingService, ISysLogService sysLogService)
+        private readonly IUserService _userService;
+        private readonly IPremissionService _permissionService;
+        public AdminController(
+            ISettingService settingService, 
+            IUserService userService,
+            IPremissionService permissionService)
         {
             _settingService = settingService;
-            _sysLogService = sysLogService;
+            _userService = userService;
+            _permissionService = permissionService;
         }
 
 
         [HttpPost("admin/jwt/login")]
         public async Task<IActionResult> Login4AntdPro([FromBody] LoginVM model)
         {
+            string userName = model.userName;
             string password = model.password;
             if (string.IsNullOrEmpty(password))
             {
@@ -32,26 +44,25 @@ namespace AgileConfig.Server.Apisite.Controllers
                 });
             }
 
-            var result = await _settingService.ValidateAdminPassword(password);
+            var result = await _userService.ValidateUserPassword(userName, model.password);
             if (result)
             {
+                var user = (await _userService.GetUsersByNameAsync(userName)).First();
+                var userRoles = await _userService.GetUserRolesAsync(user.Id);
+                var jwt = JWT.GetToken(user.Id, user.UserName, userRoles.Any(r => r == Role.Admin || r == Role.SuperAdmin));
+                var userFunctions = await _permissionService.GetUserPermission(user.Id);
 
-                var jwt = JWT.GetToken();
-
-                //addlog
-                await _sysLogService.AddSysLogAsync(new Data.Entity.SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = Data.Entity.SysLogType.Normal,
-                    LogText = $"管理员登录成功"
-                });
+                dynamic param = new ExpandoObject();
+                param.userName = user.UserName;
+                TinyEventBus.Instance.Fire(EventKeys.USER_LOGIN_SUCCESS, param);
 
                 return Json(new
                 {
                     status = "ok",
                     token = jwt,
                     type = "Bearer",
-                    currentAuthority = "admin"
+                    currentAuthority = userRoles.Select(r => r.ToString()),
+                    currentFunctions = userFunctions
                 });
             }
 
@@ -69,7 +80,7 @@ namespace AgileConfig.Server.Apisite.Controllers
         [HttpGet]
         public async Task<IActionResult> PasswordInited()
         {
-            var has = await _settingService.HasAdminPassword();
+            var has = await _settingService.HasSuperAdmin();
             return Json(new
             {
                 success = true,
@@ -114,7 +125,7 @@ namespace AgileConfig.Server.Apisite.Controllers
                 });
             }
 
-            if (await _settingService.HasAdminPassword())
+            if (await _settingService.HasSuperAdmin())
             {
                 return Json(new
                 {
@@ -123,16 +134,11 @@ namespace AgileConfig.Server.Apisite.Controllers
                 });
             }
 
-            var result = await _settingService.SetAdminPassword(password);
+            var result = await _settingService.SetSuperAdminPassword(password);
 
             if (result)
             {
-                await _sysLogService.AddSysLogAsync(new Data.Entity.SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = Data.Entity.SysLogType.Normal,
-                    LogText = $"管理员密码初始化成功"
-                });
+                TinyEventBus.Instance.Fire(EventKeys.INIT_SUPERADMIN_PASSWORD_SUCCESS);
 
                 return Json(new
                 {
@@ -151,7 +157,7 @@ namespace AgileConfig.Server.Apisite.Controllers
 
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> ChangePassword([FromBody]ChangePasswordVM model)
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordVM model)
         {
             if (Appsettings.IsPreviewMode)
             {
@@ -176,7 +182,8 @@ namespace AgileConfig.Server.Apisite.Controllers
                 });
             }
 
-            var validOld = await _settingService.ValidateAdminPassword(oldPassword);
+            var userName = this.GetCurrentUserName();
+            var validOld = await _userService.ValidateUserPassword(userName, oldPassword);
 
             if (!validOld)
             {
@@ -218,16 +225,27 @@ namespace AgileConfig.Server.Apisite.Controllers
                 });
             }
 
-            var result = await _settingService.SetAdminPassword(password);
+            var users = await _userService.GetUsersByNameAsync(this.GetCurrentUserName());
+            var user = users.Where(x => x.Status == UserStatus.Normal).FirstOrDefault();
+
+            if (user == null)
+            {
+                return Json(new
+                {
+                    message = "未找到对应的用户",
+                    err_code = "err_resetpassword_06",
+                    success = false
+                });
+            }
+
+            user.Password = Encrypt.Md5(password + user.Salt);
+            var result = await _userService.UpdateAsync(user);
 
             if (result)
             {
-                await _sysLogService.AddSysLogAsync(new Data.Entity.SysLog
-                {
-                    LogTime = DateTime.Now,
-                    LogType = Data.Entity.SysLogType.Normal,
-                    LogText = $"修改管理员密码成功"
-                });
+                dynamic param = new ExpandoObject();
+                param.userName = user.UserName;
+                TinyEventBus.Instance.Fire(EventKeys.CHANGE_USER_PASSWORD_SUCCESS, param);
 
                 return Json(new
                 {

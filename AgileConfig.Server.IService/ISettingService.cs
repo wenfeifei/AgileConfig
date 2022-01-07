@@ -1,10 +1,11 @@
 ﻿using AgileConfig.Server.Data.Entity;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AgileConfig.Server.IService
 {
-    public interface ISettingService
+    public interface ISettingService: IDisposable
     {
         Task<Setting> GetAsync(string id);
         Task<bool> AddAsync(Setting setting);
@@ -22,28 +23,28 @@ namespace AgileConfig.Server.IService
         Task<List<Setting>> GetAllSettingsAsync();
 
         /// <summary>
-        /// 管理员密码存储键
-        /// </summary>
-        string AdminPasswordSettingKey { get; }
-
-        /// <summary>
         /// 是否已经设置密码
         /// </summary>
         /// <returns></returns>
-        Task<bool> HasAdminPassword();
+        Task<bool> HasSuperAdmin();
 
         /// <summary>
         /// 设置管理员密码
         /// </summary>
         /// <param name="password"></param>
         /// <returns></returns>
-        Task<bool> SetAdminPassword(string password);
+        Task<bool> SetSuperAdminPassword(string password);
 
         /// <summary>
-        /// 校验管理员密码
+        /// 初始化环境列表
         /// </summary>
-        /// <param name="password"></param>
         /// <returns></returns>
-        Task<bool> ValidateAdminPassword(string password);
+        Task<bool> InitDefaultEnvironment();
+
+        /// <summary>
+        /// 获取环境列表
+        /// </summary>
+        /// <returns></returns>
+        Task<string[]> GetEnvironmentList();
     }
 }

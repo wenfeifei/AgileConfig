@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Agile.Config.Protocol;
 using AgileConfig.Server.Apisite.Websocket;
+using AgileConfig.Server.IService;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace AgileConfig.Server.Apisite.Controllers
 {
@@ -10,6 +13,14 @@ namespace AgileConfig.Server.Apisite.Controllers
     /// </summary>
     public class RemoteOPController : Controller
     {
+        private readonly IConfigService _configService;
+        private readonly ILogger _logger;
+        public RemoteOPController(IConfigService configService, ILoggerFactory loggerFactory)
+        {
+            _configService = configService;
+            _logger = loggerFactory.CreateLogger<RemoteServerProxyController>();
+        }
+        
         [HttpPost]
         public IActionResult AllClientsDoActionAsync([FromBody]WebsocketAction action)
         {
@@ -27,7 +38,7 @@ namespace AgileConfig.Server.Apisite.Controllers
         }
 
         [HttpPost]
-        public IActionResult AppClientsDoActionAsync([FromQuery]string appId, [FromBody]WebsocketAction action)
+        public IActionResult AppClientsDoActionAsync([FromQuery]string appId,[FromQuery]string env, [FromBody]WebsocketAction action)
         {
             if (string.IsNullOrEmpty(appId))
             {
@@ -37,8 +48,12 @@ namespace AgileConfig.Server.Apisite.Controllers
             {
                 throw new ArgumentNullException(nameof(action));
             }
+            if (string.IsNullOrEmpty(env))
+            {
+                throw new ArgumentNullException(nameof(env));
+            }
 
-            WebsocketCollection.Instance.SendActionToAppClients(appId, action);
+            WebsocketCollection.Instance.SendActionToAppClients(appId, env, action);
 
             return Json(new
             {
@@ -47,7 +62,7 @@ namespace AgileConfig.Server.Apisite.Controllers
         }
 
         [HttpPost]
-        public IActionResult OneClientDoActionAsync([FromQuery]string clientId, [FromBody]WebsocketAction action)
+        public async Task<IActionResult> OneClientDoActionAsync([FromQuery]string clientId, [FromBody]WebsocketAction action)
         {
             var client = WebsocketCollection.Instance.Get(clientId);
             if (client == null)
@@ -59,8 +74,21 @@ namespace AgileConfig.Server.Apisite.Controllers
                 throw new ArgumentNullException(nameof(action));
             }
 
-            WebsocketCollection.Instance.SendActionToOne(client, action);
+            await WebsocketCollection.Instance.SendActionToOne(client, action);
 
+            return Json(new
+            {
+                success = true,
+            });
+        }
+
+        [HttpPost]
+        public IActionResult ClearCache()
+        {
+            _configService.ClearCache();
+
+            _logger.LogInformation("Server clear all config's cache .");
+            
             return Json(new
             {
                 success = true,
