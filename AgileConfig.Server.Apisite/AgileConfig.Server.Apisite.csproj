@@ -3,21 +3,20 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
-    <AssemblyVersion>1.5.7.4</AssemblyVersion>
-    <Version>1.5.2</Version>
-    <PackageVersion>1.5.3.2</PackageVersion>
+    <AssemblyVersion>1.6.8.1</AssemblyVersion>
+    <Version>1.6.8</Version>
+    <PackageVersion>1.6.8.1</PackageVersion>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <FileVersion>1.5.7.4</FileVersion>
+    <FileVersion>1.6.8.1</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile>D:\workspace\AgileConfig\AgileConfig.Server.Apisite\AgileConfig.Server.Apisite.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\AgileConfig.Server.Apisite.xml</DocumentationFile>
     <NoWarn>1701;1702;1591;1573</NoWarn>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DocumentationFile>D:\workspace\AgileConfig\AgileConfig.Server.Apisite\AgileConfig.Server.Apisite.xml</DocumentationFile>
-    <NoWarn>1701;1702;1591;1573</NoWarn>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DocumentationFile>bin\Release\AgileConfig.Server.Apisite.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

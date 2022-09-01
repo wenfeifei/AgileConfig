@@ -14,17 +14,7 @@ namespace AgileConfig.Server.Apisite.UIExtension
 {
     public class ReactUIMiddleware
     {
-        private static Dictionary<string, string> _contentTypes = new Dictionary<string, string>
-        {
-            {".html", "text/html; charset=utf-8"},
-            {".css", "text/css; charset=utf-8"},
-            {".js", "application/javascript"},
-            {".png", "image/png"},
-            {".svg", "image/svg+xml"},
-            { ".json","application/json;charset=utf-8"},
-            { ".ico","image/x-icon"}
-        };
-        private static ConcurrentDictionary<string, byte[]> _staticFilesCache = new ConcurrentDictionary<string, byte[]>();
+        private static readonly ConcurrentDictionary<string, UIFileBag> StaticFilesCache = new ();
         private readonly RequestDelegate _next;
         private readonly ILogger _logger;
         public ReactUIMiddleware(
@@ -64,19 +54,53 @@ namespace AgileConfig.Server.Apisite.UIExtension
             return false;
         }
 
+        /// <summary>
+        /// 为了适配 pathbase ，index.html 注入的 js css ，需要使用相对路径，所以要去除 /
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        private async Task RewriteIndexHtml(string filePath)
+        {
+            var rows = await File.ReadAllLinesAsync(filePath);
+            for (int i = 0; i < rows.Length; i++)
+            {
+                var line = rows[i];
+                if (line.Contains("window.resourceBaseUrl = \"/\""))
+                {
+                    if (!string.IsNullOrWhiteSpace(Appsettings.PathBase))
+                    {
+                        line = line.Replace("/", $"{Appsettings.PathBase}/");
+                        rows[i] = line;
+                    }
+                }
+                if (line.Contains("<link rel=\"stylesheet\" href=\"/umi."))
+                {
+                    line = line.Replace("/umi.", "umi.");
+                    rows[i] = line;
+                }
+                if (line.Contains("<script src=\"/umi."))
+                {
+                    line = line.Replace("/umi.", "umi.");
+                    rows[i] = line;
+                }
+
+            }
+            await File.WriteAllLinesAsync(filePath, rows);
+        }
+
+        private static readonly string UiDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot/ui");
         public async Task Invoke(HttpContext context)
         {
-            const string uiDirectory = "wwwroot/ui";
             //handle /ui request
             var filePath = "";
             if (ShouldHandleUIRequest(context))
             {
-                filePath = uiDirectory + "/index.html";
+                filePath = UiDirectory + "/index.html";
             }
             //handle static files that Referer = xxx/ui
             if (ShouldHandleUIStaticFilesRequest(context))
             {
-                filePath = uiDirectory + context.Request.Path;
+                filePath = UiDirectory + context.Request.Path;
             }
 
             if (string.IsNullOrEmpty(filePath))
@@ -91,39 +115,57 @@ namespace AgileConfig.Server.Apisite.UIExtension
                     await context.Response.WriteAsync("This node is not an admin console node .");
                     return;
                 }
-                //output the file bytes
-
                 if (!File.Exists(filePath))
                 {
                     context.Response.StatusCode = 404;
                     return;
                 }
-
+                
+                if (StaticFilesCache.TryGetValue(filePath, out var uiFile))
+                {
+                    // cached
+                }
+                else
+                {
+                    if (filePath.EndsWith("index.html"))
+                    {
+                        await RewriteIndexHtml(filePath);
+                    }
+                    var fileData = await File.ReadAllBytesAsync(filePath);  //read file bytes
+                    var lastModified = File.GetLastWriteTime(filePath);
+                    var extType = Path.GetExtension(filePath);
+                    uiFile = new UIFileBag()
+                    {
+                        FilePath = filePath,
+                        Data = fileData,
+                        LastModified = lastModified,
+                        ExtType = extType
+                    };
+                    
+                    StaticFilesCache.TryAdd(filePath, uiFile);
+                }
+                
+                //判断前端缓存的文件是否过期
+                if (context.Request.Headers.TryGetValue("If-Modified-Since", out StringValues values))
+                {
+                    var lastModified = uiFile.LastModified;
+                    if (DateTime.TryParse(values.First(), out DateTime ifModifiedSince) && ifModifiedSince >= lastModified)
+                    {
+                        context.Response.StatusCode = 304;
+                        return;
+                    }
+                }
+                
                 context.Response.OnStarting(() =>
                 {
-                    var extType = Path.GetExtension(filePath);
-                    if (_contentTypes.TryGetValue(extType, out string contentType))
-                    {
-                        context.Response.ContentType = contentType;
-                    }
+                    context.Response.ContentType = uiFile.ContentType;
+                    context.Response.Headers.Add("last-modified", uiFile.LastModified.ToString("R"));
                     return Task.CompletedTask;
                 });
 
                 await context.Response.StartAsync();
-
-                byte[] fileData = null;
-                if (_staticFilesCache.TryGetValue(filePath, out byte[] outfileData))
-                {
-                    fileData = outfileData;
-                }
-                else
-                {
-                    fileData = await File.ReadAllBytesAsync(filePath);
-                    _staticFilesCache.TryAdd(filePath, fileData);
-                }
-                await context.Response.BodyWriter.WriteAsync(fileData);
-
-                return;
+                //output the file bytes
+                await context.Response.BodyWriter.WriteAsync(uiFile.Data);
             }
         }
     }

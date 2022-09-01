@@ -12,6 +12,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace AgileConfig.Server.Service
 {
@@ -78,11 +79,20 @@ namespace AgileConfig.Server.Service
 
             using (var service = GetSysLogService())
             {
+                var module = "";
+                if (action.Module == "r")
+                {
+                    module = "注册中心";
+                }
+                if (action.Module == "c")
+                {
+                    module = "配置中心";
+                }
                 await service.AddSysLogAsync(new SysLog
                 {
                     LogTime = DateTime.Now,
                     LogType = result ? SysLogType.Normal : SysLogType.Warn,
-                    LogText = $"通知节点【{address}】所有客户端：【{action.Action}】 响应：{(result ? "成功" : "失败")}"
+                    LogText = $"通知节点【{address}】所有客户端：【{module}】【{action.Action}】 响应：{(result ? "成功" : "失败")}"
                 });
             }
 
@@ -114,12 +124,21 @@ namespace AgileConfig.Server.Service
 
             using (var service = GetSysLogService())
             {
+                var module = "";
+                if (action.Module == "r")
+                {
+                    module = "注册中心";
+                }
+                if (action.Module == "c")
+                {
+                    module = "配置中心";
+                }
                 await service.AddSysLogAsync(new SysLog
                 {
                     LogTime = DateTime.Now,
                     LogType = result ? SysLogType.Normal : SysLogType.Warn,
                     AppId = appId,
-                    LogText = $"通知节点【{address}】应用【{appId}】的客户端：【{action.Action}】 响应：{(result ? "成功" : "失败")}"
+                    LogText = $"通知节点【{address}】应用【{appId}】的客户端：【{module}】【{action.Action}】 响应：{(result ? "成功" : "失败")}"
                 });
             }
 
@@ -164,11 +183,20 @@ namespace AgileConfig.Server.Service
 
             using (var service = GetSysLogService())
             {
+                var module = "";
+                if (action.Module == "r")
+                {
+                    module = "注册中心";
+                }
+                if (action.Module == "c")
+                {
+                    module = "配置中心";
+                }
                 await service.AddSysLogAsync(new SysLog
                 {
                     LogTime = DateTime.Now,
                     LogType = result ? SysLogType.Normal : SysLogType.Warn,
-                    LogText = $"通知节点【{address}】的客户端【{clientId}】：【{action.Action}】 响应：{(result ? "成功" : "失败")}"
+                    LogText = $"通知节点【{address}】的客户端【{clientId}】：【{module}】【{action.Action}】 响应：{(result ? "成功" : "失败")}"
                 });
             }
 
@@ -230,19 +258,35 @@ namespace AgileConfig.Server.Service
                 if (resp.StatusCode == System.Net.HttpStatusCode.OK && (await resp.GetResponseContentAsync()) == "ok")
                 {
                     node.LastEchoTime = DateTime.Now;
-                    node.Status = Data.Entity.NodeStatus.Online;
+                    node.Status = NodeStatus.Online;
                 }
                 else
                 {
-                    node.Status = Data.Entity.NodeStatus.Offline;
+                    node.Status = NodeStatus.Offline;
                 }
-
-                await service.UpdateAsync(node);
             }
             catch (Exception e)
             {
+                node.Status = NodeStatus.Offline;
                 _logger.LogInformation(e, "Try test node {0} echo , but fail .", node.Address);
             }
+            
+            if (node.Status == NodeStatus.Offline)
+            {
+                DateTime? time = node.LastEchoTime;
+                if (!time.HasValue)
+                {
+                    time = node.CreateTime;
+                }
+                if (time.HasValue && (DateTime.Now - time.Value).TotalMinutes >= 30)
+                {
+                    // 超过 30 分钟没有回应，则移除节点
+                    await service.DeleteAsync(address);
+                    return;
+                }
+            }
+            
+            await service.UpdateAsync(node);
         }
 
         public Task TestEchoAsync()
@@ -264,15 +308,27 @@ namespace AgileConfig.Server.Service
             });
         }
 
-        public async Task ClearCache(string address)
+        public async Task ClearConfigServiceCache(string address)
         {
             try
             { 
-                await (address + "/RemoteOP/ClearCache").AsHttp("POST").SendAsync();
+                await (address + "/RemoteOP/ClearConfigServiceCache").AsHttp("POST").SendAsync();
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Try to clear node {0}'s cache , but fail .", address);
+                _logger.LogError(e, "Try to clear node {0}'s config cache , but fail .", address);
+            }
+        }
+        
+        public async Task ClearServiceInfoCache(string address)
+        {
+            try
+            { 
+                await (address + "/RemoteOP/ClearServiceInfoCache").AsHttp("POST").SendAsync();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Try to clear node {0}'s servicesinfo cache , but fail .", address);
             }
         }
     }

@@ -68,10 +68,10 @@
                 component: './Clients',
               },
               {
-                name: 'list.logs-list',
-                icon: 'Bars',
-                path: '/logs',
-                component: './Logs',
+                name: 'list.service-list',
+                icon: 'Cloud',
+                path: '/service',
+                component: './Services',
               },
               {
                 name: 'list.user-list',
@@ -79,8 +79,13 @@
                 path: '/users',
                 component: './User',
                 authority: ['Admin'],
-              }
-              ,
+              },
+              {
+                name: 'list.logs-list',
+                icon: 'Bars',
+                path: '/logs',
+                component: './Logs',
+              },
               {
                 component: './404',
               },

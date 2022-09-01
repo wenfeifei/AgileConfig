@@ -1,5 +1,5 @@
 <p align="center">
-    <img height="130" src="https://ftp.bmp.ovh/imgs/2021/04/5162f8595d9c6a99.png" style="height: 130px">
+    <img height="130" src="https://static.xbaby.xyz/5162f8595d9c6a99.png" style="height: 130px">
 </p>
     
 <h1 align="center">AgileConfig</h1>
@@ -20,7 +20,35 @@
     
 这是一个基于.net core开发的轻量级配置中心。说起配置中心很容易让人跟微服务联系起来，如果你选择微服务架构，那么几乎逃不了需要一个配置中心。事实上我这里并不是要蹭微服务的热度。这个世界上有很多分布式程序但它并不是微服务。比如有很多传统的SOA的应用他们分布式部署，但并不是完整的微服务架构。这些程序由于分散在多个服务器上所以更改配置很困难。又或者某些程序即使不是分布式部署的，但是他们采用了容器化部署，他们修改配置同样很费劲。所以我开发AgileConfig并不是为了什么微服务，我更多的是为了那些分布式、容器化部署的应用能够更加简单的读取、修改配置。    
 AgileConfig秉承轻量化的特点，部署简单、配置简单、使用简单、学习简单，它只提取了必要的一些功能，并没有像Apollo那样复杂且庞大。但是它的功能也已经足够你替换webconfig，appsettings.json这些文件了。如果你不想用微服务全家桶，不想为了部署一个配置中心而需要看N篇教程跟几台服务器那么你可以试试AgileConfig  ：）   
+    
 Gitee 镜像：[https://gitee.com/kklldog/AgileConfig](https://gitee.com/kklldog/AgileConfig)    
+
+演示地址：[AgileConfig Server Demo](http://agileconfig_server.xbaby.xyz)   用户名：admin 密码：123456   
+.NET 客户端项目：[AgileConfig_Client](https://github.com/kklldog/AgileConfig_Client)   
+
+示例项目：    
+[AgileConfig MVCSample](https://github.com/kklldog/AgileConfig_Client/tree/master/AgileConfigMVCSample)   
+[AgileConfig WPFSample](https://github.com/kklldog/AgileConfig_Client/tree/master/AgileConfigWPFSample)    
+[AgileConfig ConsoleSample](https://github.com/kklldog/AgileConfig_Client/tree/master/AgileConfigConsoleSample)    
+[教程 - 如何使用AgileConfig.Client读取配置](https://www.cnblogs.com/kklldog/p/how-to-use-agileconfigclient.html)    
+[教程- 如何使用服务注册与发现](https://www.cnblogs.com/kklldog/p/agileconfig-160.html)   
+💥💥[常见问题，必看！！！](https://github.com/kklldog/AgileConfig/wiki/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%EF%BC%8C%E5%BF%85%E7%9C%8B%EF%BC%81%EF%BC%81%EF%BC%81)  
+[关于多环境的部署说明](https://github.com/dotnetcore/AgileConfig/wiki/%E5%85%B3%E4%BA%8E-1.5-%E7%89%88%E6%9C%AC%E6%94%AF%E6%8C%81%E5%A4%9A%E7%8E%AF%E5%A2%83%E7%9A%84%E8%AF%B4%E6%98%8E)   
+    
+社区资源：   
+🌷 基于 Nodejs 实现的客户端: [node-agile-client](https://github.com/LetTTGACO/node-agile-client)    
+🌷 基于 Blazor 实现的管理界面：[AgileConfigBlazorUI](https://github.com/EzrealJ/AgileConfigBlazorUI)   
+   
+Restful API:   
+[✈️ restful api](https://github.com/kklldog/AgileConfig/wiki/Restful-API)
+   
+## ChangeLog
+[📝 Changelog](https://github.com/kklldog/AgileConfig/blob/master/CHANGELOG.md)   
+   
+## 联系作者
+[📧 联系](#联系我)
+## 打赏
+[❤️❤️❤️ 打赏](#如果觉得这个项目对你有帮助可以给作者早餐加个蛋)
 ## 特点
 1. 部署简单，最少只需要一个数据节点，支持docker部署
 2. 支持多节点分布式部署来保证高可用
@@ -32,26 +60,10 @@ Gitee 镜像：[https://gitee.com/kklldog/AgileConfig](https://gitee.com/kklldog
 8. 配置修改支持版本记录，随时回滚配置
 9. 如果所有节点都故障，客户端支持从本地缓存读取配置
 10. 支持Restful API维护配置
+11. v-1.6.0 以上已支持服务注册与发现
+
     
-演示地址：[AgileConfig Server Demo](http://agileconfig_server.xbaby.xyz)   用户名：admin 密码：123456   
-客户端项目：[AgileConfig_Client](https://github.com/kklldog/AgileConfig_Client)   
-示例项目：    
-[AgileConfigMVCSample](https://github.com/kklldog/AgileConfig_Client/tree/master/AgileConfigMVCSample)   
-[AgileConfig WPFSample](https://github.com/kklldog/AgileConfig_Client/tree/master/AgileConfigWPFSample)    
-[AgileConfig ConsoleSample](https://github.com/kklldog/AgileConfig_Client/tree/master/AgileConfigConsoleSample)    
-[教程 - 如何使用AgileConfig.Client读取配置](https://www.cnblogs.com/kklldog/p/how-to-use-agileconfigclient.html)    
-👉🏻👉🏻[常见问题，必看！！！](https://github.com/kklldog/AgileConfig/wiki/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%EF%BC%8C%E5%BF%85%E7%9C%8B%EF%BC%81%EF%BC%81%EF%BC%81)👈🏻👈🏻   
-[关于多环境的部署说明](https://github.com/dotnetcore/AgileConfig/wiki/%E5%85%B3%E4%BA%8E-1.5-%E7%89%88%E6%9C%AC%E6%94%AF%E6%8C%81%E5%A4%9A%E7%8E%AF%E5%A2%83%E7%9A%84%E8%AF%B4%E6%98%8E)   
-   
-其它教程：    
-[博客园-.Net Core&Agile Config配置中心](https://www.cnblogs.com/CKExp/p/15738149.html)
-   
-API:   
-[restful api](https://github.com/kklldog/AgileConfig/wiki/Restful-API)
-## ChangeLog
-[Changelog](https://github.com/kklldog/AgileConfig/blob/master/CHANGELOG.md)   
-## 联系作者
-[联系](#联系我)
+## 💥 务必在使用 AgileConfig 之前仔细阅读以下文档
 ## 架构
 ![](https://s1.ax1x.com/2020/06/29/NRz1gO.png)
 AgileConfig的架构比较简单，主要是分3块：
@@ -61,7 +73,6 @@ AgileConfig的架构比较简单，主要是分3块：
 节点是使用asp.net core开发的一个服务。为了部署简单，直接把管理程序跟节点服务合二为一了。任何一个节点都可以在启动的时候配置环境变量开启管理程序功能。
 ### 数据库
 使用数据库来存储数据，目前支持Sqlserver, Mysql, Sqlite, PostgreSql,Oracle 五种数据库。最新版本已经切换为Freesql为数据访问组件。Freesql对多数据库的支持更加强劲，特别是对国产数据库的支持。但是因为没有国产数据库的测试环境，本项目并未支持，如果有需要我可是开分支尝试支持，但是测试工作就要靠用户啦。
-> 注意：如果使用<=1.0.4之前版本的用户请不要更新，因为EFCore跟Freesql自动建的库可能存在稍许差异，保险起见不要更新吧。
 ### 关于高可用
 AgileConfig的节点都是无状态的，所以可以横向部署多个节点来防止单点故障。在客户端配置多个节点地址后，客户端会随机连接至某个节点。
 | 问题 | 影响 | 说明 |   
@@ -88,20 +99,20 @@ sudo docker run \
 --name agile_config \
 -e TZ=Asia/Shanghai \
 -e adminConsole=true \
--e db:provider=sqlite \
--e db:conn="Data Source=agile_config.db" \
+-e db__provider=sqlite \
+-e db__conn="Data Source=agile_config.db" \
 -p 5000:5000 \
 #-v /your_host_dir:/app/db \
 -d kklldog/agile_config:latest
 ```
 通过docker建立一个agile_config实例，其中有3个环境变量需要配置:    
 1. adminConsole 配置程序是否为管理控制台。如果为true则启用控制台功能，访问该实例会出现管理界面。
-2. db:provider 配置程序的数据库类型。目前程序支持：sqlserver，mysql，sqlite, PostgreSql，Oracle 五种数据库。
-3. db:conn 配置数据库连接串    
+2. db__provider 配置程序的数据库类型。目前程序支持：sqlserver，mysql，sqlite, PostgreSql，Oracle 五种数据库。
+3. db__conn 配置数据库连接串    
    
-> 注意：如果通过IIS或者别的方式部署，请自行从主页上的[releases](https://github.com/dotnetcore/AgileConfig/releases)页面下载最新的部署包。如果自己使用源码编译，请先编译react-ui-antd项目把dist内的产物复制到apisite项目的wwwroot/ui目录下。
+> 💥注意：如果通过IIS或者别的方式部署，请自行从主页上的[releases](https://github.com/dotnetcore/AgileConfig/releases)页面下载最新的部署包。如果自己使用源码编译，请先编译react-ui-antd项目把dist内的产物复制到apisite项目的wwwroot/ui目录下。调试的时候需要复制到bin目录下。
 
-使用 docker-compose 运行
+使用 docker-compose 运行多节点集群, 环境变量 cluster=true 会尝试获取容器的 IP ，主动注册到节点列表：   
 ```
 version: '3'
 services:
@@ -116,9 +127,9 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - adminConsole=true
-      - nodes=agile_config_admin:5000,agile_config_node1:5000,agile_config_node2:5000
-      - db:provider=mysql
-      - db:conn= database=configcenter;data source=192.168.0.115;User Id=root;password=mdsd;port=3306
+      - cluster=true
+      - db__provider=mysql
+      - db__conn= database=configcenter;data source=192.168.0.115;User Id=root;password=mdsd;port=3306
   agile_config_node1:
     image: "kklldog/agile_config"
     ports:
@@ -129,8 +140,9 @@ services:
       - /etc/localtime:/etc/localtime
     environment:
       - TZ=Asia/Shanghai
-      - db:provider=mysql
-      - db:conn= database=configcenter;data source=192.168.0.115;User Id=root;password=mdsd;port=3306
+      - cluster=true
+      - db__provider=mysql
+      - db__conn= database=configcenter;data source=192.168.0.115;User Id=root;password=mdsd;port=3306
     depends_on:
       - agile_config_admin
   agile_config_node2:
@@ -143,8 +155,9 @@ services:
       - /etc/localtime:/etc/localtime
     environment:
       - TZ=Asia/Shanghai
-      - db:provider=mysql
-      - db:conn= database=configcenter;data source=192.168.0.115;User Id=root;password=mdsd;port=3306
+      - cluster=true
+      - db__provider=mysql
+      - db__conn= database=configcenter;data source=192.168.0.115;User Id=root;password=mdsd;port=3306
     depends_on:
       - agile_config_admin
 networks:
@@ -152,30 +165,29 @@ networks:
 ```
 ### 初始化管理员密码
 第一次运行程序需要初始化超级管理员密码，超管用户名固定为 admin    
-![](https://ftp.bmp.ovh/imgs/2021/04/44242b327230c5e6.png)
+![](https://static.xbaby.xyz/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20220821020958.png)
 ### 节点
 AgileConfig支持多节点部署，所有的节点都是平行的。为了简化部署，AgileConfig并没有单独的控制台程序，请直接使用任意一个节点作为控制台。当环境变量adminConsole=true时，该节点同时兼备数据节点跟控制台功能。为了控制台能够管理节点，所以需要在控制台配置节点的信息。
-> 注意：即使是作为控制台的数据节点同样需要添加到管理程序，以便管理它。
+> 💥注意：即使是作为控制台的数据节点同样需要添加到管理程序，以便管理它。
     
-![](https://ftp.bmp.ovh/imgs/2021/04/7e93011590c55d12.png)
+![](https://static.xbaby.xyz/QQ%E6%88%AA%E5%9B%BE20220821021055.png)
 ### 应用
 AgileConfig支持多应用程序接入。需要为每个应用程序配置名称、ID、秘钥等信息。    
 每个应用可以设置是否可以被继承，可以被继承的应用类似apollo的公共 namespace 的概念。公共的配置可以提取到可继承应用中，其它应用只要继承它就可以获得所有配置。   
 如果子应用跟被继承应用之间的配置键发生重复，子应用的配置会覆盖被继承的应用的配置。子应用可以继承多个应用，如果多个应用之间发生重复键，按照继承的顺序，后继承的应用的配置覆盖前面的应用。
     
-![](https://ftp.bmp.ovh/imgs/2021/04/a48014f02ced6804.png)
+![](https://static.xbaby.xyz/QQ%E6%88%AA%E5%9B%BE20220821021222.png)
+![](https://static.xbaby.xyz/QQ%E6%88%AA%E5%9B%BE20220821023033.png)
 ### 配置项
-配置完应用信息后可以为每个应用配置配置项。配置项支持分组。新添加的配置并不会被客户端感知到，需要手工点击“上线”才会推送给客户端。已上线的配置如果发生修改、删除、回滚操作，会实时推送给客户端。版本历史记录了配置的历史信息，可以回滚至任意版本。
+配置完应用信息后可以为每个应用配置配置项。配置项支持分组。新添加的配置并不会被客户端感知到，需要手工点击“发布”才会推送给客户端。已上线的配置如果发生修改、删除、回滚操作，会实时推送给客户端。版本历史记录了配置的历史信息，可以回滚至任意版本。
     
-![](https://ftp.bmp.ovh/imgs/2021/04/8ae7d8bfcef72518.png)
+![](https://static.xbaby.xyz/QQ%E6%88%AA%E5%9B%BE20220821021255.png)   
+![](https://static.xbaby.xyz/QQ%E6%88%AA%E5%9B%BE20220821022636.png)   
+![](https://static.xbaby.xyz/QQ%E6%88%AA%E5%9B%BE20220821022649.png)
 ### 客户端
 控制台可以查看已连接的客户端。
     
-![](https://ftp.bmp.ovh/imgs/2021/04/74fbc7f1daab5deb.png)
-### 系统日志
-系统日志记录了AgileConfig生产中的一些关键信息。
-    
-![](https://ftp.bmp.ovh/imgs/2021/04/9f38d55804e858d5.png)
+![](https://static.xbaby.xyz/QQ%E6%88%AA%E5%9B%BE20220821021353.png)
 
 ## 使用客户端
 客户端[AgileConfig_Client](https://github.com/kklldog/AgileConfig_Client)是使用.net core standard2.0编写的一个类库，已发布到nuget，方便用户集成。
@@ -210,18 +222,6 @@ Install-Package AgileConfig.Client
 ```
 在appsettings.json文件配置agileconfig的配置信息。
 ``` c#
-public static IHostBuilder CreateHostBuilder(string[] args) =>
-    Host.CreateDefaultBuilder(args)
-        .ConfigureAppConfiguration((context, config) =>
-        {
-            //default appsettings.json
-            config.AddAgileConfig(arg => Console.WriteLine($"config changed , action:{arg.Action} key:{arg.Key}"));
-        })
-        .ConfigureWebHostDefaults(webBuilder =>
-        {
-            webBuilder.UseStartup<Startup>();
-        });
-  ------or UseAgileConfig -------
      public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .UseAgileConfig(e => Console.WriteLine($"configs {e.Action}"))
@@ -230,25 +230,20 @@ public static IHostBuilder CreateHostBuilder(string[] args) =>
                     webBuilder.UseStartup<Startup>();
                 });
 ```
-根据环境变量读取appsettings.{env}.json配置信息。
+使用 UseAgileConfig 扩展方法配置一个配置源。
 ``` c#
-public static IHostBuilder CreateHostBuilder(string[] args) =>
-    Host.CreateDefaultBuilder(args)
-        .ConfigureAppConfiguration((context, config) =>
-        {
-            var envName = context.HostingEnvironment.EnvironmentName;
-            var configClient = new ConfigClient($"appsettings.{envName}.json");
-            config.AddAgileConfig(configClient, arg => Console.WriteLine($"config changed , action:{arg.Action} key:{arg.Key}"));
-        })
-        .ConfigureWebHostDefaults(webBuilder =>
-        {
-            webBuilder.UseStartup<Startup>();
-        });
+     public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .UseAgileConfig(new ConfigClient($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json"), e => Console.WriteLine($"configs {e.Action}"))
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<Startup>();
+                });
 ```
+如果需要根据环境变量读取appsettings.{env}.json配置信息，可以通过Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")来获取。   
+> 💥注意：如果你的程序是Framework的程序请使用[AgileConfig.Client4FR](https://github.com/kklldog/AgileConfig.Client4FR)这个专门为Framework打造的client。使用当前版本有可能死锁造成cpu100% 的风险。
 
-> 注意：☢️☢️☢️如果你的程序是Framework的程序请使用[AgileConfig.Client4FR](https://github.com/kklldog/AgileConfig.Client4FR)这个专门为Framework打造的client。使用当前版本有可能死锁造成cpu100% 的风险。
-
-> 注意：如果节点使用nginx反代的话，需要对nginx进行配置，使其支持websocket协议，不然客户端跟节点的长连接没法建立。
+> 💥注意：如果节点使用nginx反代的话，需要对nginx进行配置，使其支持websocket协议，不然客户端跟节点的长连接没法建立。
 
 ## 读取配置
 AgileConfig支持asp.net core 标准的IConfiguration，跟IOptions模式读取配置。
@@ -300,16 +295,7 @@ public class HomeController : Controller
 }
 ```
 
-在Startup内使用AddAgileConfig配置注入，然后其他地方就可以通过IConfigClient来获取这个实例。
-``` c#
-public class Startup
-{
-    public void ConfigureServices(IServiceCollection services)
-    {
-        services.AddAgileConfig();
-    }
-}
-```
+也可以通过IConfigClient来获取这个实例
 
 ``` c#
 public class HomeController : Controller
@@ -359,4 +345,4 @@ public class HomeController : Controller
 
         
 ### 感谢💖💖💖
-大鹏￥66.66 , 瘦草￥6.66 + 88 , ziana￥10.0 , Nullable￥9.99 , *三 ￥6.66 , HHM ￥6.66
+大鹏￥66.66 , 瘦草￥6.66 + 88 , ziana￥10.0 , Nullable￥9.99 , *三 ￥6.66 , HHM ￥6.66 , 微笑刺客 ￥6.66 , 飞鸟与鱼 ￥38.88, *航 ￥9.9, *啦 ￥6.66, *海 ￥6.66, Dyx 邓杨喜 ￥30

@@ -35,10 +35,10 @@ namespace AgileConfig.Server.Apisite.Controllers
 
             if (!await _settingService.HasSuperAdmin())
             {
-                return Redirect("/ui#/user/initpassword");
+                return Redirect(Request.PathBase + "/ui#/user/initpassword");
             }
 
-            return Redirect("/ui");
+            return Redirect(Request.PathBase + "/ui");
         }
 
         public async Task<IActionResult> Current()
@@ -96,5 +96,11 @@ namespace AgileConfig.Server.Apisite.Controllers
             return Content("ok");
         }
 
+
+        [AllowAnonymous]
+        public IActionResult GetIP()
+        {
+            return Content(String.Join(',', IPExt.GetEndpointIp()));
+        }
     }
 }

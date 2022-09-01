@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Text;
 using AgileConfig.Server.Apisite.UIExtension;
 using AgileConfig.Server.Apisite.Websocket;
@@ -24,6 +25,17 @@ namespace AgileConfig.Server.Apisite
         {
             Configuration = configuration;
             Global.LoggerFactory = loggerFactory;
+
+            TrustSSL(configuration);
+        }
+        
+        private void TrustSSL(IConfiguration configuration)
+        {
+            var alwaysTrustSsl = configuration["alwaysTrustSsl"];
+            if (!string.IsNullOrEmpty(alwaysTrustSsl) && alwaysTrustSsl.ToLower() == "true")
+            {
+                ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
+            }
         }
 
         public IConfiguration Configuration
@@ -34,15 +46,16 @@ namespace AgileConfig.Server.Apisite
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var jwtService = new JwtService();
             services.AddMemoryCache();
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                       .AddJwtBearer(options =>
                       {
                           options.TokenValidationParameters = new TokenValidationParameters
                           {
-                              ValidIssuer = JwtSetting.Instance.Issuer,
-                              ValidAudience = JwtSetting.Instance.Audience,
-                              IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSetting.Instance.SecurityKey)),
+                              ValidIssuer = jwtService.Issuer,
+                              ValidAudience = jwtService.Audience,
+                              IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtService.GetSecurityKey())),
                           };
                       });
             services.AddCors();
@@ -62,6 +75,12 @@ namespace AgileConfig.Server.Apisite
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IServiceProvider serviceProvider)
         {
+            var basePath = Configuration["pathBase"];
+            if (!string.IsNullOrWhiteSpace(basePath))
+            {
+                app.UsePathBase(basePath);
+            }
+            
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
