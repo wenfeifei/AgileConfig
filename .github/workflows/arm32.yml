@@ -1,12 +1,14 @@
-name: publish ci workflow
+name: arm32 ci workflow
 
 on:
   push:
-    branches: [ publish ]
+    branches: [ arm32 ]
     paths-ignore: 
       - '**/*.md'
       - '**/*.yml'
-    
+  pull_request:
+    branches: [ arm32 ]
+
 jobs:
   build-reactapp:
     runs-on: ubuntu-latest
@@ -54,4 +56,4 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_NAME }}
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
         repository: kklldog/agile_config
-        tags: latest
+        tags: arm32
