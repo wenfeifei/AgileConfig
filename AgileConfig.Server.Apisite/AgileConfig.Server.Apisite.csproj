@@ -3,11 +3,13 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
-    <AssemblyVersion>1.6.13</AssemblyVersion>
-    <Version>1.6.13</Version>
-    <PackageVersion>1.6.12</PackageVersion>
+    <AssemblyVersion>1.6.20</AssemblyVersion>
+    <Version>1.6.20</Version>
+    <PackageVersion>1.6.20</PackageVersion>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <FileVersion>1.6.13</FileVersion>
+    <FileVersion>1.6.20</FileVersion>
+    <Authors>kklldog</Authors>
+    <Company>kklldog</Company>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
