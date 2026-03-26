@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<ProjectReference Include="..\Agile.Config.Protocol\Agile.Config.Protocol.csproj" />
+		<ProjectReference Include="..\AgileConfig.Server.Data.Entity\AgileConfig.Server.Data.Entity.csproj" />
+	</ItemGroup>
+
+</Project>

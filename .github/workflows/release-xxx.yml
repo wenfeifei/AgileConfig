@@ -7,13 +7,13 @@ on:
       - '**/*.yml'
     tags:        
       - 'v-*'
-    
+  workflow_dispatch:  
 jobs:
   build-reactapp:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: AgileConfig.Server.UI/react-ui-antd
+        working-directory: src/AgileConfig.Server.UI/react-ui-antd
     strategy:
       matrix:
         node-version: [16.x]
@@ -27,33 +27,36 @@ jobs:
         
     - run: npm install
     - run: npm run build
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: agileconfig-ui
-        path: AgileConfig.Server.UI/react-ui-antd/dist/
+        path: src/AgileConfig.Server.UI/react-ui-antd/dist/
   build-dotnet:
     needs: build-reactapp
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+    - uses: actions/checkout@v4
+    - name: setup .net
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 6.0.100
+        dotnet-version: | 
+          8.0.x
+          9.0.x
+          10.0.x
     - name: Install dependencies
       run: dotnet restore
     - name: Build
       run: dotnet build --configuration Release --no-restore
-    - uses: actions/download-artifact@v2
+    - uses: actions/download-artifact@v4
       with:
         name: agileconfig-ui
-        path: AgileConfig.Server.Apisite/wwwroot/ui
+        path: src/AgileConfig.Server.Apisite/wwwroot/ui
     - name: build server release xxx
-      run: dotnet publish AgileConfig.Server.Apisite/AgileConfig.Server.Apisite.csproj -c Release
+      run: dotnet publish src/AgileConfig.Server.Apisite/AgileConfig.Server.Apisite.csproj -c Release
     - uses: vimtor/action-zip@v1
       with:
-        files: AgileConfig.Server.Apisite/bin/Release/net6.0/publish/
+        files: src/AgileConfig.Server.Apisite/bin/Release/net10.0/publish/
         dest: agileconfig_server_deploy.zip
     - name: create release
       uses: ncipollo/release-action@v1

@@ -6,13 +6,14 @@ on:
     paths-ignore: 
       - '**/*.md'
       - '**/*.yml'
-    
+  workflow_dispatch:
+
 jobs:
   build-reactapp:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: AgileConfig.Server.UI/react-ui-antd
+        working-directory: src/AgileConfig.Server.UI/react-ui-antd
     strategy:
       matrix:
         node-version: [16.x]
@@ -26,28 +27,31 @@ jobs:
         
     - run: npm install
     - run: npm run build
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: agileconfig-ui
-        path: AgileConfig.Server.UI/react-ui-antd/dist/
-  build-dotnet:
+        path: src/AgileConfig.Server.UI/react-ui-antd/dist/
+  build-dotnet-push-to-hub:
     needs: build-reactapp
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+    - uses: actions/checkout@v4
+    - name: setup .net
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 6.0.100
+        dotnet-version: | 
+          8.0.x
+          9.0.x
+          10.0.x
     - name: Install dependencies
       run: dotnet restore
     - name: Build
       run: dotnet build --configuration Release --no-restore
-    - uses: actions/download-artifact@v2
+    - uses: actions/download-artifact@v4
       with:
         name: agileconfig-ui
-        path: AgileConfig.Server.Apisite/wwwroot/ui
+        path: src/AgileConfig.Server.Apisite/wwwroot/ui
     - name: Push to Docker Hub
       uses: docker/build-push-action@v1
       with:
@@ -55,3 +59,15 @@ jobs:
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
         repository: kklldog/agile_config
         tags: latest
+    - name: Login to ACR and push
+      uses: aliyun/acr-login@v1
+      with:
+        login-server: https://registry.cn-shanghai.aliyuncs.com
+        username: "${{ secrets.ALI_REGISTRY_USERNAME }}"
+        password: "${{ secrets.ALI_REGISTRY_PASSWORD }}"
+    - name: Build and push image
+      env:
+        IMAGE_TAG: latest
+      run: |
+        docker build -t registry.cn-shanghai.aliyuncs.com/kklldog/agile_config:$IMAGE_TAG .
+        docker push registry.cn-shanghai.aliyuncs.com/kklldog/agile_config:$IMAGE_TAG

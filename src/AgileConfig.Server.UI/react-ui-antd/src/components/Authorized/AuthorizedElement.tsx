@@ -1,0 +1,40 @@
+import { getFunctions } from '@/utils/authority';
+import React from 'react';
+type AuthorizedProps = {
+  appId?: string,
+  authority?: string[],
+  judgeKey: string,
+  noMatch?: React.ReactNode;
+};
+
+export const checkUserPermission = (functions:string[] | undefined,judgeKey:string, appid:string|undefined)=>{
+  let appId = '';
+  const fnList = functions ?? [];
+  if (appid) {
+    appId = appid ;
+  }
+  // Check for global permission (without GLOBAL_ prefix)
+  let key = fnList.find(x=>x === judgeKey);
+  if (key) return true;
+
+  // Check for app-specific permission
+  let matchKey = ('APP_'+ appId + '_' + judgeKey);
+  key = fnList.find(x=>x === matchKey);
+  if (key) return true;
+
+  return false;
+}
+
+const AuthorizedEle: React.FunctionComponent<AuthorizedProps>  = (props)=>{
+  
+  let functions:string[] = [];
+  if (props.authority) {
+    functions = props.authority;
+} else {
+    functions = getFunctions();
+  }
+
+  return checkUserPermission(functions,props.judgeKey,props?.appId)? <>{props.children}</> : <>{props.noMatch}</>
+};
+
+export default AuthorizedEle;

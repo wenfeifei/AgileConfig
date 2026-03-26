@@ -28,7 +28,7 @@ jobs:
         
     - run: npm install
     - run: npm run build
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: agileconfig-ui
         path: AgileConfig.Server.UI/react-ui-antd/dist/
@@ -37,16 +37,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+    - uses: actions/checkout@v4
+    - name: setup .net
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 6.0.100
+        dotnet-version: | 
+          8.0.x
+          9.0.x
+          10.0.x
     - name: Install dependencies
       run: dotnet restore
     - name: Build
       run: dotnet build --configuration Release --no-restore
-    - uses: actions/download-artifact@v2
+    - uses: actions/download-artifact@v4
       with:
         name: agileconfig-ui
         path: AgileConfig.Server.Apisite/wwwroot/ui

@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AgileConfig.Server.Data.Abstraction\AgileConfig.Server.Data.Abstraction.csproj" />
+    <ProjectReference Include="..\AgileConfig.Server.Data.Freesql\AgileConfig.Server.Data.Freesql.csproj" />
+    <ProjectReference Include="..\AgileConfig.Server.IService\AgileConfig.Server.IService.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AgileConfig.Server.Common\AgileConfig.Server.Common.csproj" />
+    <ProjectReference Include="..\AgileConfig.Server.Data.Entity\AgileConfig.Server.Data.Entity.csproj" />
+  </ItemGroup>
+
+</Project>

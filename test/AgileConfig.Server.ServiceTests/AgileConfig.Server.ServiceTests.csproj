@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.0.2" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.0.2" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Testcontainers.MongoDb" Version="4.9.0" />
+    <PackageReference Include="Testcontainers.MySql" Version="4.9.0" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AgileConfig.Server.Common\AgileConfig.Server.Common.csproj" />
+    <ProjectReference Include="..\..\src\AgileConfig.Server.Data.Repository.Freesql\AgileConfig.Server.Data.Repository.Freesql.csproj" />
+    <ProjectReference Include="..\..\src\AgileConfig.Server.Data.Repository.Mongodb\AgileConfig.Server.Data.Repository.Mongodb.csproj" />
+    <ProjectReference Include="..\..\src\AgileConfig.Server.Data.Repository.Selector\AgileConfig.Server.Data.Repository.Selector.csproj" />
+    <ProjectReference Include="..\..\src\AgileConfig.Server.Service\AgileConfig.Server.Service.csproj" />
+  </ItemGroup>
+
+</Project>

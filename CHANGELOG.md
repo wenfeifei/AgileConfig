@@ -1,5 +1,67 @@
 # Change log
 ------------------------------
+[1.11.2]
+* Fixbug #228
+
+[1.11.1]
+* Role base access control
+
+[1.10.0]
+* Use publish timeline virtual id to compare the version between client. To enable this feature the client should use version >=1.8.0 .
+
+[1.9.14]
+* add ASCII banner when app starting
+
+[1.9.13]
+* when check table existing will ignore case 
+
+[1.9.10]
+* client page support filter by appId and env
+
+[1.9.9]
+* fix issue #200
+
+[1.9.8]
+* Correct naming
+* Refactor some logic
+* Upgrade MonogoDb driver to 3.0
+
+[1.9.7]
+* Refactor event bus
+
+[1.9.6]
+* Support OTLP headers
+
+[1.9.5]
+* Fix some small issue
+
+[1.9.4]
+* Support opentelemetry logs, traces, metrics
+
+[1.9.3]
+* Refactoring the TinyEventbus
+
+[1.9.2]
+* 修复无法后台校验 node 存活的问题
+
+[1.9.0]
+* mongodb supported
+  
+[1.8.1]
+* Use build-in HttpClient instead of AgileHttp client.
+
+[1.8.0]
+* 升级到 .NET8
+
+[1.7.2]
+* 修复 appid 为中文时无法获取配置的问题
+
+[1.7.1]
+* 修复在严格区分大小写的 SQLServer 上建表失败的问题
+
+[1.7.0]
+* 支持 SSO 登录   
+
 [1.6.20]
 * 优化MD5性能   
   https://github.com/dotnetcore/AgileConfig/pull/140
